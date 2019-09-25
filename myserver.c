@@ -12,6 +12,8 @@
 #include <errno.h>
 #include <dirent.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <time.h>
 #define BUF 1024
 typedef struct node
 {
@@ -20,7 +22,7 @@ typedef struct node
 } msg;
 void push(msg *head, char msgtext[]);
 void freeList(msg *head);
-bool createfile(char *user, char *receiver, char *subject, msg *head, char *spool);
+bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 
 int main(int argc, char **argv)
@@ -119,7 +121,7 @@ int main(int argc, char **argv)
                         {
                             buffer[size] = '\0';
                             strcpy(subject, buffer);
-                            printf("subject: %s", subject);
+                            printf("user: %s subject: %s", user, subject);
                             valid = 1;
                         }
                         else if (size > 0 && i == 3)
@@ -136,7 +138,9 @@ int main(int argc, char **argv)
                                 if (size > 0)
                                 {
                                     buffer[size] = '\0';
+                                    if(size != 2 && buffer[0] != '.' && buffer[1] != '\n'){
                                     push(head, buffer);
+                                    }
                                     valid = 1;
                                 }
                                 else
@@ -148,12 +152,16 @@ int main(int argc, char **argv)
                             } while (size != 2 && buffer[0] != '.' && buffer[1] != '\n');
                             if (valid == 1)
                             {
-                                printf("%s", head->text);
-                                printf("%s", head->next->text);
                                 //save msg here
-                                createfile(user, receiver, subject, head, spool);
+                                if(createmsg(user, receiver, subject, head, spool))
+                                {
+                                    strcpy(buffer, "OK\n");
+                                }
+                                else
+                                {
+                                    strcpy(buffer, "ERR\n");
+                                }
                                 freeList(head);
-                                strcpy(buffer, "OK\n");
                                 send(new_socket, buffer, strlen(buffer), 0);
                             }
                             buffer[size] = '\0';
@@ -248,16 +256,19 @@ void freeList(msg *head)
     }
 }
 
-bool createfile(char *user, char *receiver, char *subject, msg *head, char *spool)
+bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool)
 {
-    int fd, j;
+    int fd;
     char temp[BUF];
+    receiver[strlen(receiver)-1] = '\0'; //get rid of '\n'
+    //build folder for receiver
     strcpy(temp, spool);
+    strcat(temp, "/");
+    strcat(temp, receiver);
     //Create user directory if non exisiting
-    // to do: build receiver folder with spool
-    if (mkdir(receiver, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0)
+    if (mkdir(temp, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0)
     {
-        printf("%s ir successfully created", receiver);
+        printf("%s ir successfully created", temp);
     }
     else if (errno == EEXIST)
     {
@@ -268,6 +279,43 @@ bool createfile(char *user, char *receiver, char *subject, msg *head, char *spoo
     {
         printf("some other error");
     }
+    /*time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char s[64];
+    assert(strftime(s, sizeof(s), "%c", tm));
+    for(int i = 0; i < strlen(s); i++){
+        if(s[i]==' '){
+            s[i]='_';
+        }
+    }
+    strcat(temp, "/");
+    strcat(temp, s);
+    strcat(temp, ".txt");
+    */
+    //create file
+    strcat(temp,"/message.txt");
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    fd = creat(temp, mode);
+    if(fd == -1)
+    {
+        printf("Error creating file");
+        return false;
+    }
+    //write msg to file
+    FILE *f = fopen(temp, "w");
+    if (f == NULL)
+    {
+        printf("Error opening file!\n");
+        return false;
+    }
+    fprintf(f, "Sender: %sBetreff: %s", user, subject);
+    msg* a = head;
+    while(a!=NULL)
+    {
+        fprintf(f, "%s", a->text);
+        a = a->next;
+    }
+    fclose(f);
     return true;
 }
 

@@ -7,4 +7,4 @@ server:
 	gcc -Wall myserver.c -o myserver
 
 clean:
-	rm -f server client
+	rm -f myserver myclient

@@ -141,8 +141,9 @@ int main(int argc, char **argv)
                                 if (size > 0)
                                 {
                                     buffer[size] = '\0';
-                                    if(size != 2 && buffer[0] != '.' && buffer[1] != '\n'){
-                                    push(head, buffer);
+                                    if (size != 2 && buffer[0] != '.' && buffer[1] != '\n')
+                                    {
+                                        push(head, buffer);
                                     }
                                     valid = 1;
                                 }
@@ -156,7 +157,7 @@ int main(int argc, char **argv)
                             if (valid == 1)
                             {
                                 //save msg here
-                                if(createmsg(user, receiver, subject, head, spool))
+                                if (createmsg(user, receiver, subject, head, spool))
                                 {
                                     strcpy(buffer, "OK\n");
                                 }
@@ -186,9 +187,11 @@ int main(int argc, char **argv)
                     {
                         strcpy(user, buffer);
                         printf("user: %s", user);
-                        if (listAllMessages(spool, user))
+                        char messages[BUF];
+                        if (listAllMessages(spool, user, messages))
                         {
-                            strcpy(buffer, "OK\n");
+                            strcpy(buffer, messages);
+                            strcat(buffer, "OK\n");
                             send(new_socket, buffer, strlen(buffer), 0);
                             isValid = true;
                         }
@@ -285,7 +288,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
 {
     int fd;
     char temp[BUF];
-    receiver[strlen(receiver)-1] = '\0'; //get rid of '\n'
+    receiver[strlen(receiver) - 1] = '\0'; //get rid of '\n'
     //build folder for receiver
     strcpy(temp, spool);
     strcat(temp, "/");
@@ -318,10 +321,10 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     strcat(temp, ".txt");
     */
     //create file
-    strcat(temp,"/message.txt");
+    strcat(temp, "/message.txt");
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     fd = creat(temp, mode);
-    if(fd == -1)
+    if (fd == -1)
     {
         printf("Error creating file");
         return false;
@@ -334,8 +337,8 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
         return false;
     }
     fprintf(f, "Sender: %sBetreff: %s", user, subject);
-    msg* a = head;
-    while(a!=NULL)
+    msg *a = head;
+    while (a != NULL)
     {
         fprintf(f, "%s", a->text);
         a = a->next;

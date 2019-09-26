@@ -26,12 +26,11 @@ int getNumberOfMessages(char *dirPath)
     return fileCounter;
 }
 
-bool listAllMessages(char *spool, char *user)
+bool listAllMessages(char *spool, char *user, char *messages)
 {
     struct dirent *dp;
     DIR *dir;
     FILE *fp;
-    char messages[BUF];
     char path[BUF];
     char *subject;
     size_t len = 0;
@@ -61,7 +60,6 @@ bool listAllMessages(char *spool, char *user)
                 strcpy(msgPath, path);
                 strcat(msgPath, "/");
                 strcat(msgPath, dp->d_name);
-                printf("%s\n", msgPath);
                 if ((fp = fopen(msgPath, "r")) == NULL)
                 {
                     perror("Cannot open message file");
@@ -76,6 +74,5 @@ bool listAllMessages(char *spool, char *user)
         }
     }
     closedir(dir);
-    printf("%s", messages);
     return true;
 }

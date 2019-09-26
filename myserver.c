@@ -14,12 +14,15 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <time.h>
-#define BUF 1024
+
+#include "inputHelper.h"
+
 typedef struct node
 {
     char text[BUF];
     struct node *next;
 } msg;
+
 void push(msg *head, char msgtext[]);
 void freeList(msg *head);
 bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
@@ -76,7 +79,7 @@ int main(int argc, char **argv)
     {
         printf("some other error");
     }
-    while (1)
+    while (true)
     {
         printf("Waiting for connections...\n");
         new_socket = accept(create_socket, (struct sockaddr *)&cliaddress, &addrlen);
@@ -139,8 +142,9 @@ int main(int argc, char **argv)
                                 if (size > 0)
                                 {
                                     buffer[size] = '\0';
-                                    if(size != 2 && buffer[0] != '.' && buffer[1] != '\n'){
-                                    push(head, buffer);
+                                    if (size != 2 && buffer[0] != '.' && buffer[1] != '\n')
+                                    {
+                                        push(head, buffer);
                                     }
                                     valid = 1;
                                 }
@@ -154,7 +158,7 @@ int main(int argc, char **argv)
                             if (valid == 1)
                             {
                                 //save msg here
-                                if(createmsg(user, receiver, subject, head, spool))
+                                if (createmsg(user, receiver, subject, head, spool))
                                 {
                                     strcpy(buffer, "OK\n");
                                 }
@@ -174,6 +178,29 @@ int main(int argc, char **argv)
                             send(new_socket, buffer, strlen(buffer), 0);
                             break;
                         }
+                    }
+                }
+                else if ((strncmp(buffer, "LIST", 4)) == 0)
+                {
+                    size = readline(new_socket, buffer, BUF - 1);
+                    bool isValid = false;
+                    if (size > 0 && size < 10)
+                    {
+                        strcpy(user, buffer);
+                        printf("user: %s", user);
+                        char messages[BUF];
+                        if (listAllMessages(spool, user, messages))
+                        {
+                            strcpy(buffer, messages);
+                            strcat(buffer, "OK\n");
+                            send(new_socket, buffer, strlen(buffer), 0);
+                            isValid = true;
+                        }
+                    }
+                    if (!isValid)
+                    {
+                        strcpy(buffer, "ERR\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
                     }
                 }
             }
@@ -225,6 +252,7 @@ ssize_t readline(int fd, void *vptr, size_t maxlen)
     *ptr = 0; // null terminate like fgets()
     return (n);
 }
+
 void push(msg *head, char msgtext[])
 {
     msg *current = head;
@@ -261,7 +289,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
 {
     int fd;
     char temp[BUF];
-    receiver[strlen(receiver)-1] = '\0'; //get rid of '\n'
+    receiver[strlen(receiver) - 1] = '\0'; //get rid of '\n'
     //build folder for receiver
     strcpy(temp, spool);
     strcat(temp, "/");
@@ -301,7 +329,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     printf("%s", temp);
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     fd = creat(temp, mode);
-    if(fd == -1)
+    if (fd == -1)
     {
         printf("Error creating file");
         return false;
@@ -369,3 +397,13 @@ int counter(char* userdir)
     return i;
 }
 //TO DO: create(), listen() catch errors
+// TODO: create(), listen() catch errors
+
+// TODO check for memory leaks (free...)
+
+// TODO on createfile() it will send OK. no matter if something failed in create file.
+// Createfile function is however boolean and it can be additionaly check if something went wrong
+
+// TODO improve performance - data sending is to slow (3-4 nested loops)
+
+// TODO comment code before code review

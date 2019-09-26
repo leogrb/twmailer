@@ -23,6 +23,7 @@ typedef struct node
 void push(msg *head, char msgtext[]);
 void freeList(msg *head);
 bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
+int counter(char* userdir);
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 
 int main(int argc, char **argv)
@@ -293,7 +294,11 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     strcat(temp, ".txt");
     */
     //create file
-    strcat(temp,"/message.txt");
+    int j = counter(temp);
+    char buf2[BUF];
+    snprintf(buf2, sizeof(buf2), "/message%d.txt",j);
+    strcat(temp, buf2);
+    printf("%s", temp);
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     fd = creat(temp, mode);
     if(fd == -1)
@@ -301,14 +306,15 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
         printf("Error creating file");
         return false;
     }
-    //write msg to file
+    close(fd);
+    //write msg to file, easier to write to file*
     FILE *f = fopen(temp, "w");
     if (f == NULL)
     {
         printf("Error opening file!\n");
         return false;
     }
-    fprintf(f, "Sender: %sBetreff: %s", user, subject);
+    fprintf(f, "%s%s-\n", user, subject);
     msg* a = head;
     while(a!=NULL)
     {
@@ -316,7 +322,50 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
         a = a->next;
     }
     fclose(f);
+    
     return true;
 }
 
+int counter(char* userdir)
+{
+    ssize_t bytesr;
+    int fd;
+    int i;
+    size_t a = 1024;
+    char count[BUF];
+    char *b = count;
+    strcpy(count, userdir);
+    strcat(count, "/count");
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    fd = creat(count, mode);
+    if(fd == -1)
+    {
+        printf("Error creating file");
+        return false;
+    }
+    close(fd);
+    //write msg to file, easier to write to file*
+    FILE *f = fopen(count, "r+");
+    if (f == NULL)
+    {
+        printf("Error opening file!\n");
+        return -1;
+    }
+    if((getline(&b, &a, f)) == 0)
+    {
+        i = 1;
+        fprintf(f, "%d", i);
+        printf("count is zero");
+    }
+    else
+    {
+        i = atoi(b);
+        i++;
+        printf("i %d", i);
+        printf("count is not zero");
+        fprintf(f, "%d", i);
+    }
+    fclose(f);
+    return i;
+}
 //TO DO: create(), listen() catch errors

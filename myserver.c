@@ -14,12 +14,15 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <time.h>
-#define BUF 1024
+
+#include "inputHelper.h"
+
 typedef struct node
 {
     char text[BUF];
     struct node *next;
 } msg;
+
 void push(msg *head, char msgtext[]);
 void freeList(msg *head);
 bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
@@ -75,7 +78,7 @@ int main(int argc, char **argv)
     {
         printf("some other error");
     }
-    while (1)
+    while (true)
     {
         printf("Waiting for connections...\n");
         new_socket = accept(create_socket, (struct sockaddr *)&cliaddress, &addrlen);
@@ -175,6 +178,27 @@ int main(int argc, char **argv)
                         }
                     }
                 }
+                else if ((strncmp(buffer, "LIST", 4)) == 0)
+                {
+                    size = readline(new_socket, buffer, BUF - 1);
+                    bool isValid = false;
+                    if (size > 0 && size < 10)
+                    {
+                        strcpy(user, buffer);
+                        printf("user: %s", user);
+                        if (listAllMessages(spool, user))
+                        {
+                            strcpy(buffer, "OK\n");
+                            send(new_socket, buffer, strlen(buffer), 0);
+                            isValid = true;
+                        }
+                    }
+                    if (!isValid)
+                    {
+                        strcpy(buffer, "ERR\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
+                    }
+                }
             }
             else if (size == 0)
             {
@@ -224,6 +248,7 @@ ssize_t readline(int fd, void *vptr, size_t maxlen)
     *ptr = 0; // null terminate like fgets()
     return (n);
 }
+
 void push(msg *head, char msgtext[])
 {
     msg *current = head;
@@ -319,4 +344,13 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     return true;
 }
 
-//TO DO: create(), listen() catch errors
+// TODO: create(), listen() catch errors
+
+// TODO check for memory leaks (free...)
+
+// TODO on createfile() it will send OK. no matter if something failed in create file.
+// Createfile function is however boolean and it can be additionaly check if something went wrong
+
+// TODO improve performance - data sending is to slow (3-4 nested loops)
+
+// TODO comment code before code review

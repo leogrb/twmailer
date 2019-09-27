@@ -323,6 +323,11 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     */
     //create file
     int j = counter(temp);
+    if(j == -1)
+    {
+        printf("Error occured while processing message");
+        return false;
+    }
     char buf2[BUF];
     snprintf(buf2, sizeof(buf2), "/message%d.txt",j);
     strcat(temp, buf2);
@@ -356,42 +361,45 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
 
 int counter(char* userdir)
 {
-    ssize_t bytesr;
-    int fd;
     int i;
-    size_t a = 1024;
     char count[BUF];
-    char *b = count;
+    char *counter;
+    size_t len = 0;
+    char numbr[2];
     strcpy(count, userdir);
     strcat(count, "/count");
-    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-    fd = creat(count, mode);
-    if(fd == -1)
+    FILE *f = fopen(count, "r+"); //open file for reading/writing(doenst have to exist)
+    if(f == NULL)
     {
-        printf("Error creating file");
-        return false;
-    }
-    close(fd);
-    //write msg to file, easier to write to file*
-    FILE *f = fopen(count, "r+");
-    if (f == NULL)
-    {
-        printf("Error opening file!\n");
-        return -1;
-    }
-    if((getline(&b, &a, f)) == 0)
-    {
-        i = 1;
-        fprintf(f, "%d", i);
-        printf("count is zero");
+        if((f = fopen(count, "w+")) != NULL) //if file not existing create file to read/write
+        {
+            i = 1;
+        }
+        else
+        {
+            printf("Error creating file");
+            return -1;
+        }
     }
     else
     {
-        i = atoi(b);
+        // read counter of file
+        getline(&counter, &len, f);
+        numbr[0] = counter[5];
+        numbr[1] = '\0';
+        i = (int) strtol(numbr,NULL, 10);
         i++;
-        printf("i %d", i);
-        printf("count is not zero");
-        fprintf(f, "%d", i);
+        fclose(f);
+        // reopen file to overwrite counter
+        if((f = fopen(count, "w+")) != NULL)
+        {
+            fprintf(f, "count%d", i);
+        }
+        else
+        {
+            printf("Error opening file");
+            return -1;
+        }
     }
     fclose(f);
     return i;

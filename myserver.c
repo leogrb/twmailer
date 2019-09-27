@@ -14,7 +14,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <time.h>
-
+#include <ctype.h>
 #include "inputHelper.h"
 
 typedef struct node
@@ -27,6 +27,7 @@ void push(msg *head, char msgtext[]);
 void freeList(msg *head);
 bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
 int counter(char* userdir);
+bool deletemsg(char *user, int msgid, char *spool);
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 
 int main(int argc, char **argv)
@@ -37,8 +38,8 @@ int main(int argc, char **argv)
     char user[10];
     char receiver[10];
     char subject[82];
-    int size;
-    int valid;
+    char DELnumbr[2];
+    int size, valid;
     struct sockaddr_in address, cliaddress;
     if (argc < 3)
     {
@@ -203,6 +204,56 @@ int main(int argc, char **argv)
                         send(new_socket, buffer, strlen(buffer), 0);
                     }
                 }
+                else if ((strncmp(buffer, "DEL", 3)) == 0)
+                {
+                    size = readline(new_socket, buffer, BUF - 1);
+                    bool DELvalid = false;
+                    if (size > 0 && size < 10)
+                    {
+                        strcpy(user, buffer);
+                        printf("user: %s", user);
+                        size = readline(new_socket, buffer, BUF - 1);
+                        if (size > 0)
+                        {
+                            int n = 0;
+                            int msgnr;
+                            while(n < size && isdigit(buffer[n]))
+                            {
+                                n++;
+                            }
+                            if(n == 0)
+                            {
+                                DELvalid = false;
+                            }
+                            if(n == 1)
+                            {
+                                DELnumbr[0] = buffer[0];
+                                DELnumbr[1] = '\0';
+                                msgnr = (int) strtol(DELnumbr,NULL, 10);
+                                if(msgnr != 0)
+                                {
+                                    DELvalid = deletemsg(user, msgnr, spool);
+                                }
+                            }
+                            else if(n > 1 && buffer[n] == '\n')
+                            {
+                                buffer[n] = '\0';
+                                msgnr = (int) strtol(buffer, NULL, 10);
+                                DELvalid = deletemsg(user, msgnr, spool);
+                            }
+                        }
+                    }
+                    if (!DELvalid)
+                    {
+                        strcpy(buffer, "ERR\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
+                    }
+                    else
+                    {
+                        strcpy(buffer, "OK\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
+                    }
+                }
             }
             else if (size == 0)
             {
@@ -355,7 +406,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
         a = a->next;
     }
     fclose(f);
-    
+
     return true;
 }
 
@@ -374,6 +425,7 @@ int counter(char* userdir)
         if((f = fopen(count, "w+")) != NULL) //if file not existing create file to read/write
         {
             i = 1;
+            fprintf(f, "count%d", i);
         }
         else
         {
@@ -403,6 +455,40 @@ int counter(char* userdir)
     }
     fclose(f);
     return i;
+}
+
+bool deletemsg(char *user, int msgid, char *spool)
+{
+    char temp[BUF];
+    char buf2[BUF];
+    user[strlen(user) - 1] = '\0'; //get rid of '\n'
+    //build folder for user
+    strcpy(temp, spool);
+    strcat(temp, "/");
+    strcat(temp, user);
+    snprintf(buf2, sizeof(buf2), "/message%d.txt",msgid);
+    strcat(temp, buf2);
+    printf("searching for %s", temp);
+    FILE *f = fopen(temp, "r+"); //open file for reading/writing(doenst have to exist)
+    if(f == NULL)
+    {
+        printf("file doesnt exist");
+        return false;
+    }
+    else
+    {
+        fclose(f);
+        int status = remove(temp);
+        if(status == -1)
+        {
+            if(errno == EBUSY)
+            {
+                printf("File is used by other process");
+            }
+            return false;
+        }
+    }
+    return true;
 }
 //TO DO: create(), listen() catch errors
 // TODO: create(), listen() catch errors

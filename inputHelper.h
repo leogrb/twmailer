@@ -17,7 +17,7 @@ int getNumberOfMessages(char *dirPath)
     dirp = opendir(dirPath);
     while ((entry = readdir(dirp)) != NULL)
     {
-        if (entry->d_type == DT_REG && strcmp(entry->d_name, "count") == 0)
+        if (entry->d_type == DT_REG && strncmp(entry->d_name, "count", 5) != 0)
         {
             fileCounter++;
         }
@@ -54,7 +54,7 @@ bool listAllMessages(char *spool, char *user, char *messages)
     {
         if (!(strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0))
         {
-            if (dp->d_type == DT_REG) // for regular file
+            if (dp->d_type == DT_REG && strncmp(dp->d_name, "count", 5) != 0) // for regular file
             {
                 char msgPath[BUF];
                 strcpy(msgPath, path);

@@ -26,7 +26,7 @@ typedef struct node
 void push(msg *head, char msgtext[]);
 void freeList(msg *head);
 bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
-int counter(char* userdir);
+int counter(char *userdir);
 bool deletemsg(char *user, int msgid, char *spool);
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 
@@ -204,6 +204,59 @@ int main(int argc, char **argv)
                         send(new_socket, buffer, strlen(buffer), 0);
                     }
                 }
+                else if ((strncmp(buffer, "READ", 4)) == 0)
+                {
+                    size = readline(new_socket, buffer, BUF - 1);
+                    bool isValid = false;
+                    char output[BUF];
+                    if (size > 0 && size < 10)
+                    {
+                        strcpy(user, buffer);
+                        printf("user: %s", user);
+                        size = readline(new_socket, buffer, BUF - 1);
+                        if (size > 0)
+                        {
+                            int n = 0;
+                            int msgNumber;
+                            while (n < size && isdigit(buffer[n]))
+                            {
+                                n++;
+                            }
+                            if (n == 0)
+                            {
+                                isValid = false;
+                            }
+                            if (n == 1)
+                            {
+                                char readNumber[2];
+                                readNumber[0] = buffer[0];
+                                readNumber[1] = '\n';
+                                msgNumber = (int)strtol(readNumber, NULL, 10);
+                                if (msgNumber != 0)
+                                {
+                                    isValid = readMessage(user, msgNumber, spool, output);
+                                }
+                            }
+                            else if (n > 1 && buffer[n] == '\n')
+                            {
+                                buffer[n] = '\0';
+                                msgNumber = (int)strtol(buffer, NULL, 10);
+                                isValid = readMessage(user, msgNumber, spool, output);
+                            }
+                        }
+                    }
+                    if (!isValid)
+                    {
+                        strcpy(buffer, "ERR\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
+                    }
+                    else
+                    {
+                        strcpy(buffer, output);
+                        strcat(buffer, "OK\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
+                    }
+                }
                 else if ((strncmp(buffer, "DEL", 3)) == 0)
                 {
                     size = readline(new_socket, buffer, BUF - 1);
@@ -217,28 +270,28 @@ int main(int argc, char **argv)
                         {
                             int n = 0;
                             int msgnr;
-                            while(n < size && isdigit(buffer[n]))
+                            while (n < size && isdigit(buffer[n]))
                             {
                                 n++;
                             }
-                            if(n == 0)
+                            if (n == 0)
                             {
                                 DELvalid = false;
                             }
-                            if(n == 1)
+                            if (n == 1)
                             {
                                 DELnumbr[0] = buffer[0];
                                 DELnumbr[1] = '\0';
-                                msgnr = (int) strtol(DELnumbr,NULL, 10);
-                                if(msgnr != 0)
+                                msgnr = (int)strtol(DELnumbr, NULL, 10);
+                                if (msgnr != 0)
                                 {
                                     DELvalid = deletemsg(user, msgnr, spool);
                                 }
                             }
-                            else if(n > 1 && buffer[n] == '\n')
+                            else if (n > 1 && buffer[n] == '\n')
                             {
                                 buffer[n] = '\0';
-                                msgnr = (int) strtol(buffer, NULL, 10);
+                                msgnr = (int)strtol(buffer, NULL, 10);
                                 DELvalid = deletemsg(user, msgnr, spool);
                             }
                         }
@@ -374,13 +427,13 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     */
     //create file
     int j = counter(temp);
-    if(j == -1)
+    if (j == -1)
     {
         printf("Error occured while processing message");
         return false;
     }
     char buf2[BUF];
-    snprintf(buf2, sizeof(buf2), "/message%d.txt",j);
+    snprintf(buf2, sizeof(buf2), "/message%d.txt", j);
     strcat(temp, buf2);
     printf("%s", temp);
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -399,8 +452,8 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
         return false;
     }
     fprintf(f, "%s%s-\n", user, subject);
-    msg* a = head;
-    while(a!=NULL)
+    msg *a = head;
+    while (a != NULL)
     {
         fprintf(f, "%s", a->text);
         a = a->next;
@@ -410,19 +463,20 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     return true;
 }
 
-int counter(char* userdir)
+int counter(char *userdir)
 {
     int i;
     char count[BUF];
-    char *counter;
+    char *counter;
+
     size_t len = 0;
     char numbr[2];
     strcpy(count, userdir);
     strcat(count, "/count");
     FILE *f = fopen(count, "r+"); //open file for reading/writing(doenst have to exist)
-    if(f == NULL)
+    if (f == NULL)
     {
-        if((f = fopen(count, "w+")) != NULL) //if file not existing create file to read/write
+        if ((f = fopen(count, "w+")) != NULL) //if file not existing create file to read/write
         {
             i = 1;
             fprintf(f, "count%d", i);
@@ -439,11 +493,11 @@ int counter(char* userdir)
         getline(&counter, &len, f);
         numbr[0] = counter[5];
         numbr[1] = '\0';
-        i = (int) strtol(numbr,NULL, 10);
+        i = (int)strtol(numbr, NULL, 10);
         i++;
         fclose(f);
         // reopen file to overwrite counter
-        if((f = fopen(count, "w+")) != NULL)
+        if ((f = fopen(count, "w+")) != NULL)
         {
             fprintf(f, "count%d", i);
         }
@@ -466,11 +520,11 @@ bool deletemsg(char *user, int msgid, char *spool)
     strcpy(temp, spool);
     strcat(temp, "/");
     strcat(temp, user);
-    snprintf(buf2, sizeof(buf2), "/message%d.txt",msgid);
+    snprintf(buf2, sizeof(buf2), "/message%d.txt", msgid);
     strcat(temp, buf2);
     printf("searching for %s", temp);
     FILE *f = fopen(temp, "r+"); //open file for reading/writing(doenst have to exist)
-    if(f == NULL)
+    if (f == NULL)
     {
         printf("file doesnt exist");
         return false;
@@ -479,9 +533,9 @@ bool deletemsg(char *user, int msgid, char *spool)
     {
         fclose(f);
         int status = remove(temp);
-        if(status == -1)
+        if (status == -1)
         {
-            if(errno == EBUSY)
+            if (errno == EBUSY)
             {
                 printf("File is used by other process");
             }
@@ -501,3 +555,5 @@ bool deletemsg(char *user, int msgid, char *spool)
 // TODO improve performance - data sending is to slow (3-4 nested loops)
 
 // TODO comment code before code review
+
+// TODO instead of printf when error, use perror

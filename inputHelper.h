@@ -17,7 +17,7 @@ int getNumberOfMessages(char *dirPath)
     dirp = opendir(dirPath);
     while ((entry = readdir(dirp)) != NULL)
     {
-        if (entry->d_type == DT_REG)
+        if (entry->d_type == DT_REG && strcmp(entry->d_name, "count") == 0)
         {
             fileCounter++;
         }
@@ -74,5 +74,32 @@ bool listAllMessages(char *spool, char *user, char *messages)
         }
     }
     closedir(dir);
+    return true;
+}
+
+bool readMessage(char *user, int msgNumber, char *spool, char *output)
+{
+    char messagePath[BUF];
+    char messageName[BUF];
+
+    user[strlen(user) - 1] = '\0';
+    strcpy(messagePath, spool);
+    strcat(messagePath, "/");
+    strcat(messagePath, user);
+    snprintf(messageName, sizeof(messageName), "/message%d.txt", msgNumber);
+    strcat(messagePath, messageName);
+
+    FILE *fp;
+    if ((fp = fopen(messagePath, "r")) == NULL)
+    {
+        perror("Cannot open message file");
+        return false;
+    }
+    fseek(fp, 0, SEEK_END);
+    size_t fileLength = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    output[fileLength] = '\0';
+    fread(output, fileLength, 1, fp);
+    fclose(fp);
     return true;
 }

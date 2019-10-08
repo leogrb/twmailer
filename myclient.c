@@ -20,14 +20,12 @@ int main(int argc, char **argv)
     struct timeval timeout;
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
-
     if (argc < 3)
     {
         printf("Usage: %s serveraddress port\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     int port = atoi(argv[2]);
-    printf("%d", port);
     if ((create_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) // create socket for connection
     {
         perror("Socket error");
@@ -58,11 +56,10 @@ int main(int argc, char **argv)
 
     do
     {
-        printf("Send message: ");
+        printf("Enter command: ");
         fgets(buffer, BUF, stdin);
         send(create_socket, buffer, strlen(buffer), 0);
         size = recv(create_socket, buffer, BUF - 1, 0);
-        printf("%d", size);
         if (size > 0)
         {
             buffer[size] = '\0';

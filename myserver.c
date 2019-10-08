@@ -17,17 +17,6 @@
 #include <ctype.h>
 #include "inputHelper.h"
 
-typedef struct node
-{
-    char text[BUF];
-    struct node *next;
-} msg;
-
-void push(msg *head, char msgtext[]);
-void freeList(msg *head);
-bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool);
-int counter(char *userdir);
-bool deletemsg(char *user, int msgid, char *spool);
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 
 int main(int argc, char **argv)
@@ -47,11 +36,14 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     int port = atoi(argv[1]);
-    printf("%d", port);
     char *spool = (char *)malloc(sizeof(char) * strlen(argv[2]));
     spool = argv[2];
-    create_socket = socket(AF_INET, SOCK_STREAM, 0);
-
+    if((create_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+        perror("Error creating socket\n");
+        free(spool);
+        return EXIT_FAILURE;
+    }
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -60,25 +52,30 @@ int main(int argc, char **argv)
     if (bind(create_socket, (struct sockaddr *)&address, sizeof(address)) != 0)
     {
         perror("bind error");
+        free(spool);
         return EXIT_FAILURE;
     }
-    listen(create_socket, 5);
+    if(listen(create_socket, 5) == -1)
+    {
+        perror("Listen to socket failed\n");
+        free(spool);
+        return EXIT_FAILURE;
+    }
 
     addrlen = sizeof(struct sockaddr_in);
 
     //Create spool directory if non exisiting
     if (mkdir(spool, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0)
     {
-        printf("%s ir successfully created", spool);
+        printf("Spool directory: %s successfully created\n", spool);
     }
     else if (errno == EEXIST)
     {
         // mkdir failed
-        printf("dir already exists");
     }
     else
     {
-        printf("some other error");
+        perror("some other error");
     }
     while (true)
     {
@@ -87,7 +84,7 @@ int main(int argc, char **argv)
         if (new_socket > 0)
         {
             printf("Client connected from %s:%d...\n", inet_ntoa(cliaddress.sin_addr), ntohs(cliaddress.sin_port));
-            strcpy(buffer, "Welcome to myserver, Please enter your command:\n");
+            strcpy(buffer, "Welcome to twmailer, Please enter your command:\n");
             send(new_socket, buffer, strlen(buffer), 0);
         }
         do
@@ -96,14 +93,13 @@ int main(int argc, char **argv)
             if (size > 0)
             {
                 buffer[size] = '\0';
-                printf("%d", size);
                 printf("Message received: %s", buffer);
                 if ((strncmp(buffer, "SEND", 4)) == 0)
                 {
+                    printf("Processing SEND request\n");
                     // process message
                     for (int i = 0; i < 4; i++)
                     {
-                        printf("%d", i);
                         valid = -1;
                         size = readline(new_socket, buffer, BUF - 1);
                         if (size > 0 && size < 10 && i < 2)
@@ -112,13 +108,13 @@ int main(int argc, char **argv)
                             if (i == 0)
                             {
                                 strcpy(user, buffer);
-                                printf("user: %s", user);
+                                printf("Request from user: %s", user);
                                 valid = 1;
                             }
                             else if (i == 1)
                             {
                                 strcpy(receiver, buffer);
-                                printf("receiver: %s", receiver);
+                                printf("Send to receiver: %s", receiver);
                                 valid = 1;
                             }
                         }
@@ -126,7 +122,7 @@ int main(int argc, char **argv)
                         {
                             buffer[size] = '\0';
                             strcpy(subject, buffer);
-                            printf("user: %s subject: %s", user, subject);
+                            printf("Mail subject: %s", subject);
                             valid = 1;
                         }
                         else if (size > 0 && i == 3)
@@ -138,7 +134,7 @@ int main(int argc, char **argv)
                             strcpy(head->text, buffer);
                             do
                             {
-                                // fix: if msg is empty (just '\n'), '\n.' is still stored
+                                
                                 size = readline(new_socket, buffer, BUF - 1);
                                 if (size > 0)
                                 {
@@ -161,10 +157,12 @@ int main(int argc, char **argv)
                                 //save msg here
                                 if (createmsg(user, receiver, subject, head, spool))
                                 {
+                                    printf("Request successfully executed\n");
                                     strcpy(buffer, "OK\n");
                                 }
                                 else
                                 {
+                                    printf("Request execution failed\n");
                                     strcpy(buffer, "ERR\n");
                                 }
                                 freeList(head);
@@ -174,7 +172,7 @@ int main(int argc, char **argv)
                         }
                         else if (valid != 1)
                         {
-                            printf("%d", i);
+                            printf("Request execution failed\n");
                             strcpy(buffer, "ERR\n");
                             send(new_socket, buffer, strlen(buffer), 0);
                             break;
@@ -183,15 +181,17 @@ int main(int argc, char **argv)
                 }
                 else if ((strncmp(buffer, "LIST", 4)) == 0)
                 {
+                    printf("Processing LIST request\n");
                     size = readline(new_socket, buffer, BUF - 1);
                     bool isValid = false;
                     if (size > 0 && size < 10)
                     {
                         strcpy(user, buffer);
-                        printf("user: %s", user);
+                        printf("Request from user: %s", user);
                         char messages[BUF];
                         if (listAllMessages(spool, user, messages))
                         {
+                            printf("Request successfully executed\n");
                             strcpy(buffer, messages);
                             strcat(buffer, "OK\n");
                             send(new_socket, buffer, strlen(buffer), 0);
@@ -200,19 +200,21 @@ int main(int argc, char **argv)
                     }
                     if (!isValid)
                     {
+                        printf("Request execution failed\n");
                         strcpy(buffer, "ERR\n");
                         send(new_socket, buffer, strlen(buffer), 0);
                     }
                 }
                 else if ((strncmp(buffer, "READ", 4)) == 0)
                 {
+                    printf("Processing READ request\n");
                     size = readline(new_socket, buffer, BUF - 1);
                     bool isValid = false;
                     char output[BUF];
                     if (size > 0 && size < 10)
                     {
                         strcpy(user, buffer);
-                        printf("user: %s", user);
+                        printf("Request from user: %s", user);
                         size = readline(new_socket, buffer, BUF - 1);
                         if (size > 0)
                         {
@@ -247,11 +249,13 @@ int main(int argc, char **argv)
                     }
                     if (!isValid)
                     {
+                        printf("Request execution failed\n");
                         strcpy(buffer, "ERR\n");
                         send(new_socket, buffer, strlen(buffer), 0);
                     }
                     else
                     {
+                        printf("Request successfully executed\n");
                         strcpy(buffer, output);
                         strcat(buffer, "OK\n");
                         send(new_socket, buffer, strlen(buffer), 0);
@@ -259,12 +263,13 @@ int main(int argc, char **argv)
                 }
                 else if ((strncmp(buffer, "DEL", 3)) == 0)
                 {
+                    printf("Processing DELETE request\n");
                     size = readline(new_socket, buffer, BUF - 1);
                     bool DELvalid = false;
                     if (size > 0 && size < 10)
                     {
                         strcpy(user, buffer);
-                        printf("user: %s", user);
+                        printf("Request from user: %s", user);
                         size = readline(new_socket, buffer, BUF - 1);
                         if (size > 0)
                         {
@@ -298,11 +303,13 @@ int main(int argc, char **argv)
                     }
                     if (!DELvalid)
                     {
+                        printf("Request execution failed\n");
                         strcpy(buffer, "ERR\n");
                         send(new_socket, buffer, strlen(buffer), 0);
                     }
                     else
                     {
+                        printf("Request successfully executed\n");
                         strcpy(buffer, "OK\n");
                         send(new_socket, buffer, strlen(buffer), 0);
                     }
@@ -357,195 +364,6 @@ ssize_t readline(int fd, void *vptr, size_t maxlen)
     return (n);
 }
 
-void push(msg *head, char msgtext[])
-{
-    msg *current = head;
-    if (head->text[0] != '\0')
-    {
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
-
-        /* now we can add a new variable */
-        current->next = malloc(sizeof(msg));
-        strcpy(current->next->text, msgtext);
-        current->next->next = NULL;
-    }
-    else
-    {
-        strcpy(head->text, msgtext);
-    }
-}
-
-void freeList(msg *head)
-{
-    msg *tmp;
-    while (head != NULL)
-    {
-        tmp = head;
-        head = head->next;
-        free(tmp);
-    }
-}
-
-bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool)
-{
-    int fd;
-    char temp[BUF];
-    receiver[strlen(receiver) - 1] = '\0'; //get rid of '\n'
-    //build folder for receiver
-    strcpy(temp, spool);
-    strcat(temp, "/");
-    strcat(temp, receiver);
-    //Create user directory if non exisiting
-    if (mkdir(temp, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0)
-    {
-        printf("%s ir successfully created", temp);
-    }
-    else if (errno == EEXIST)
-    {
-        // mkdir failed
-        printf("dir already exists");
-    }
-    else
-    {
-        printf("some other error");
-    }
-    /*time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
-    char s[64];
-    assert(strftime(s, sizeof(s), "%c", tm));
-    for(int i = 0; i < strlen(s); i++){
-        if(s[i]==' '){
-            s[i]='_';
-        }
-    }
-    strcat(temp, "/");
-    strcat(temp, s);
-    strcat(temp, ".txt");
-    */
-    //create file
-    int j = counter(temp);
-    if (j == -1)
-    {
-        printf("Error occured while processing message");
-        return false;
-    }
-    char buf2[BUF];
-    snprintf(buf2, sizeof(buf2), "/message%d.txt", j);
-    strcat(temp, buf2);
-    printf("%s", temp);
-    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-    fd = creat(temp, mode);
-    if (fd == -1)
-    {
-        printf("Error creating file");
-        return false;
-    }
-    close(fd);
-    //write msg to file, easier to write to file*
-    FILE *f = fopen(temp, "w");
-    if (f == NULL)
-    {
-        printf("Error opening file!\n");
-        return false;
-    }
-    fprintf(f, "%s%s-\n", user, subject);
-    msg *a = head;
-    while (a != NULL)
-    {
-        fprintf(f, "%s", a->text);
-        a = a->next;
-    }
-    fclose(f);
-
-    return true;
-}
-
-int counter(char *userdir)
-{
-    int i;
-    char count[BUF];
-    char *counter;
-
-    size_t len = 0;
-    char numbr[2];
-    strcpy(count, userdir);
-    strcat(count, "/count");
-    FILE *f = fopen(count, "r+"); //open file for reading/writing(doenst have to exist)
-    if (f == NULL)
-    {
-        if ((f = fopen(count, "w+")) != NULL) //if file not existing create file to read/write
-        {
-            i = 1;
-            fprintf(f, "count%d", i);
-        }
-        else
-        {
-            printf("Error creating file");
-            return -1;
-        }
-    }
-    else
-    {
-        // read counter of file
-        getline(&counter, &len, f);
-        numbr[0] = counter[5];
-        numbr[1] = '\0';
-        i = (int)strtol(numbr, NULL, 10);
-        i++;
-        fclose(f);
-        // reopen file to overwrite counter
-        if ((f = fopen(count, "w+")) != NULL)
-        {
-            fprintf(f, "count%d", i);
-        }
-        else
-        {
-            printf("Error opening file");
-            return -1;
-        }
-    }
-    fclose(f);
-    return i;
-}
-
-bool deletemsg(char *user, int msgid, char *spool)
-{
-    char temp[BUF];
-    char buf2[BUF];
-    user[strlen(user) - 1] = '\0'; //get rid of '\n'
-    //build folder for user
-    strcpy(temp, spool);
-    strcat(temp, "/");
-    strcat(temp, user);
-    snprintf(buf2, sizeof(buf2), "/message%d.txt", msgid);
-    strcat(temp, buf2);
-    printf("searching for %s", temp);
-    FILE *f = fopen(temp, "r+"); //open file for reading/writing(doenst have to exist)
-    if (f == NULL)
-    {
-        printf("file doesnt exist");
-        return false;
-    }
-    else
-    {
-        fclose(f);
-        int status = remove(temp);
-        if (status == -1)
-        {
-            if (errno == EBUSY)
-            {
-                printf("File is used by other process");
-            }
-            return false;
-        }
-    }
-    return true;
-}
-//TO DO: create(), listen() catch errors
-// TODO: create(), listen() catch errors
 
 // TODO check for memory leaks (free...)
 

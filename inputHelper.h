@@ -6,8 +6,129 @@
 #include <stdbool.h>
 #include <string.h>
 #include <dirent.h>
-
+#include "message.h"
 #define BUF 1024
+
+int counter(char *userdir)
+{
+    int i;
+    char count[BUF];
+    char *counter;
+
+    size_t len = 0;
+    char numbr[2];
+    strcpy(count, userdir);
+    strcat(count, "/count");
+    FILE *f = fopen(count, "r+"); //open file for reading/writing(doenst have to exist)
+    if (f == NULL)
+    {
+        if ((f = fopen(count, "w+")) != NULL) //if file not existing create file to read/write
+        {
+            i = 1;
+            fprintf(f, "count%d", i);
+        }
+        else
+        {
+            perror("Error creating file");
+            return -1;
+        }
+    }
+    else
+    {
+        // read counter of file
+        getline(&counter, &len, f);
+        numbr[0] = counter[5];
+        numbr[1] = '\0';
+        i = (int)strtol(numbr, NULL, 10);
+        i++;
+        fclose(f);
+        // reopen file to overwrite counter
+        if ((f = fopen(count, "w+")) != NULL)
+        {
+            fprintf(f, "count%d", i);
+        }
+        else
+        {
+            perror("Error opening file");
+            return -1;
+        }
+    }
+    fclose(f);
+    return i;
+}
+
+bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool)
+{
+    int fd;
+    char temp[BUF];
+    receiver[strlen(receiver) - 1] = '\0'; //get rid of '\n'
+    //build folder for receiver
+    strcpy(temp, spool);
+    strcat(temp, "/");
+    strcat(temp, receiver);
+    //Create user directory if non exisiting
+    if (mkdir(temp, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0)
+    {
+        //printf("%s ir successfully created", temp);
+    }
+    else if (errno == EEXIST)
+    {
+        // mkdir failed
+        //printf("dir already exists");
+    }
+    else
+    {
+        //printf("some other error");
+    }
+    /*time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char s[64];
+    assert(strftime(s, sizeof(s), "%c", tm));
+    for(int i = 0; i < strlen(s); i++){
+        if(s[i]==' '){
+            s[i]='_';
+        }
+    }
+    strcat(temp, "/");
+    strcat(temp, s);
+    strcat(temp, ".txt");
+    */
+    //create file
+    int j = counter(temp);
+    if (j == -1)
+    {
+        perror("Error occured while processing message");
+        return false;
+    }
+    char buf2[BUF];
+    snprintf(buf2, sizeof(buf2), "/message%d.txt", j);
+    strcat(temp, buf2);
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    fd = creat(temp, mode);
+    if (fd == -1)
+    {
+        perror("Error creating file");
+        return false;
+    }
+    close(fd);
+    //write msg to file, easier to write to file*
+    FILE *f = fopen(temp, "w");
+    if (f == NULL)
+    {
+        perror("Error opening file!\n");
+        return false;
+    }
+    fprintf(f, "%s%s-\n", user, subject);
+    msg *a = head;
+    while (a != NULL)
+    {
+        fprintf(f, "%s", a->text);
+        a = a->next;
+    }
+    fclose(f);
+
+    return true;
+}
 
 int getNumberOfMessages(char *dirPath)
 {
@@ -77,6 +198,8 @@ bool listAllMessages(char *spool, char *user, char *messages)
     return true;
 }
 
+
+
 bool readMessage(char *user, int msgNumber, char *spool, char *output)
 {
     char messagePath[BUF];
@@ -101,5 +224,39 @@ bool readMessage(char *user, int msgNumber, char *spool, char *output)
     output[fileLength] = '\0';
     fread(output, fileLength, 1, fp);
     fclose(fp);
+    return true;
+}
+
+
+bool deletemsg(char *user, int msgid, char *spool)
+{
+    char temp[BUF];
+    char buf2[BUF];
+    user[strlen(user) - 1] = '\0'; //get rid of '\n'
+    //build folder for user
+    strcpy(temp, spool);
+    strcat(temp, "/");
+    strcat(temp, user);
+    snprintf(buf2, sizeof(buf2), "/message%d.txt", msgid);
+    strcat(temp, buf2);
+    FILE *f = fopen(temp, "r+"); //open file for reading/writing(doenst have to exist)
+    if (f == NULL)
+    {
+        perror("file doesnt exist");
+        return false;
+    }
+    else
+    {
+        fclose(f);
+        int status = remove(temp);
+        if (status == -1)
+        {
+            if (errno == EBUSY)
+            {
+                perror("File is used by other process");
+            }
+            return false;
+        }
+    }
     return true;
 }

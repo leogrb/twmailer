@@ -15,7 +15,8 @@
 #include <assert.h>
 #include <time.h>
 #include <ctype.h>
-#include "inputHelper.h"
+
+#include "include/ServerInputHelper.h"
 
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 
@@ -84,7 +85,7 @@ int main(int argc, char **argv)
         if (new_socket > 0)
         {
             printf("Client connected from %s:%d...\n", inet_ntoa(cliaddress.sin_addr), ntohs(cliaddress.sin_port));
-            strcpy(buffer, "Welcome to twmailer, Please enter your command:\n");
+            strcpy(buffer, "Welcome to twmailer, Please enter your command\n");
             send(new_socket, buffer, strlen(buffer), 0);
         }
         do
@@ -363,15 +364,3 @@ ssize_t readline(int fd, void *vptr, size_t maxlen)
     *ptr = 0; // null terminate like fgets()
     return (n);
 }
-
-
-// TODO check for memory leaks (free...)
-
-// TODO on createfile() it will send OK. no matter if something failed in create file.
-// Createfile function is however boolean and it can be additionaly check if something went wrong
-
-// TODO improve performance - data sending is to slow (3-4 nested loops)
-
-// TODO comment code before code review
-
-// TODO instead of printf when error, use perror

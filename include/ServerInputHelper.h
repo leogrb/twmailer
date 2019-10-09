@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <dirent.h>
+
 #include "message.h"
 #define BUF 1024
 
@@ -132,6 +133,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
 
 int getNumberOfMessages(char *dirPath)
 {
+    // on list check also for number of saved messages in directory
     int fileCounter = 0;
     DIR *dirp;
     struct dirent *entry;
@@ -159,7 +161,7 @@ bool listAllMessages(char *spool, char *user, char *messages)
     strcpy(path, spool);
     strcat(path, "/");
     strcat(path, user);
-
+    // get rid of new line char at the end of the string
     path[strlen(path) - 1] = '\0';
     dir = opendir(path);
 
@@ -169,13 +171,14 @@ bool listAllMessages(char *spool, char *user, char *messages)
         return false;
     }
     int numberOfMessages = getNumberOfMessages(path);
-    sprintf(messages, "%d", numberOfMessages);
+    sprintf(messages, "Number of messages: %d", numberOfMessages);
     strcat(messages, "\n");
     while ((dp = readdir(dir)) != NULL)
     {
         if (!(strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0))
         {
-            if (dp->d_type == DT_REG && strncmp(dp->d_name, "count", 5) != 0) // for regular file
+            // check for regular files and skip count file
+            if (dp->d_type == DT_REG && strncmp(dp->d_name, "count", 5) != 0)
             {
                 char msgPath[BUF];
                 strcpy(msgPath, path);
@@ -186,10 +189,14 @@ bool listAllMessages(char *spool, char *user, char *messages)
                     perror("Cannot open message file");
                     return false;
                 }
-                getline(&subject, &len, fp); // user name first
-                getline(&subject, &len, fp); // second time is subject
+                getline(&subject, &len, fp);           // user name first
+                getline(&subject, &len, fp);           // second time is subject
+                // add message ID
+                strcat(messages, "(");
+                strcat(messages, dp->d_name);
+                strcat(messages, "): ");
+                // add subject to output line
                 strcat(messages, subject);
-                // strcat(messages, "\n");
                 fclose(fp);
             }
         }
@@ -197,8 +204,6 @@ bool listAllMessages(char *spool, char *user, char *messages)
     closedir(dir);
     return true;
 }
-
-
 
 bool readMessage(char *user, int msgNumber, char *spool, char *output)
 {
@@ -226,7 +231,6 @@ bool readMessage(char *user, int msgNumber, char *spool, char *output)
     fclose(fp);
     return true;
 }
-
 
 bool deletemsg(char *user, int msgid, char *spool)
 {

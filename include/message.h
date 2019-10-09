@@ -1,3 +1,6 @@
+/*
+header file for linked list implementation used for storing multi-line messages
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #define BUF 1024

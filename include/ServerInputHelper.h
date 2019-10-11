@@ -149,6 +149,26 @@ int getNumberOfMessages(char *dirPath)
     return fileCounter;
 }
 
+long long getMessageID(char *fileName)
+{
+    char *p = fileName;
+    long long id = 0;
+    while (*p)
+    {
+        if (isdigit(*p) || ((*p == '-' || *p == '+') && isdigit(*(p + 1))))
+        {
+            // Found a number
+            id = strtol(p, &p, 10); // Read number
+        }
+        else
+        {
+            // Otherwise, move on to the next character.
+            p++;
+        }
+    }
+    return id;
+}
+
 bool listAllMessages(char *spool, char *user, char *messages)
 {
     struct dirent *dp;
@@ -189,12 +209,17 @@ bool listAllMessages(char *spool, char *user, char *messages)
                     perror("Cannot open message file");
                     return false;
                 }
-                getline(&subject, &len, fp);           // user name first
-                getline(&subject, &len, fp);           // second time is subject
+                getline(&subject, &len, fp); // user name first
+                getline(&subject, &len, fp); // second time is subject
                 // add message ID
-                strcat(messages, "(");
-                strcat(messages, dp->d_name);
-                strcat(messages, "): ");
+                strcat(messages, "ID: ");
+                // convert number from message and parse it
+                char *fileName = dp->d_name;
+                long long id = getMessageID(fileName);
+                char sID[10];
+                sprintf(sID, "%lld", id);
+                strcat(messages, sID);
+                strcat(messages, ", Subject: ");
                 // add subject to output line
                 strcat(messages, subject);
                 fclose(fp);

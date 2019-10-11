@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     int port = atoi(argv[1]);
     char *spool = (char *)malloc(sizeof(char) * strlen(argv[2]));
     spool = argv[2];
-    if((create_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    if ((create_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
         perror("Error creating socket\n");
         free(spool);
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
         free(spool);
         return EXIT_FAILURE;
     }
-    if(listen(create_socket, 5) == -1)
+    if (listen(create_socket, 5) == -1)
     {
         perror("Listen to socket failed\n");
         free(spool);
@@ -93,11 +93,16 @@ int main(int argc, char **argv)
             size = readline(new_socket, buffer, BUF - 1);
             if (size > 0)
             {
+                if (strncmp(buffer, "quit", 4) != 0)
+                {
+                    send(new_socket, buffer, strlen(buffer), 0);
+                }
                 buffer[size] = '\0';
                 printf("Message received: %s", buffer);
                 if ((strncmp(buffer, "SEND", 4)) == 0)
                 {
                     printf("Processing SEND request\n");
+                    char *sendResponse = "SEND\n";
                     // process message
                     for (int i = 0; i < 4; i++)
                     {
@@ -111,12 +116,14 @@ int main(int argc, char **argv)
                                 strcpy(user, buffer);
                                 printf("Request from user: %s", user);
                                 valid = 1;
+                                send(new_socket, sendResponse, strlen(sendResponse), 0);
                             }
                             else if (i == 1)
                             {
                                 strcpy(receiver, buffer);
                                 printf("Send to receiver: %s", receiver);
                                 valid = 1;
+                                send(new_socket, sendResponse, strlen(sendResponse), 0);
                             }
                         }
                         else if (size > 0 && size < 82 && i == 2)
@@ -125,6 +132,7 @@ int main(int argc, char **argv)
                             strcpy(subject, buffer);
                             printf("Mail subject: %s", subject);
                             valid = 1;
+                            send(new_socket, sendResponse, strlen(sendResponse), 0);
                         }
                         else if (size > 0 && i == 3)
                         {
@@ -135,7 +143,6 @@ int main(int argc, char **argv)
                             strcpy(head->text, buffer);
                             do
                             {
-                                
                                 size = readline(new_socket, buffer, BUF - 1);
                                 if (size > 0)
                                 {
@@ -187,6 +194,7 @@ int main(int argc, char **argv)
                     bool isValid = false;
                     if (size > 0 && size < 10)
                     {
+                        // NOTE Stefan: Not needed temp response because we have only one input
                         strcpy(user, buffer);
                         printf("Request from user: %s", user);
                         char messages[BUF];
@@ -214,6 +222,8 @@ int main(int argc, char **argv)
                     char output[BUF];
                     if (size > 0 && size < 10)
                     {
+                        char *readResponse = "READ\n";
+                        send(new_socket, readResponse, strlen(readResponse), 0);
                         strcpy(user, buffer);
                         printf("Request from user: %s", user);
                         size = readline(new_socket, buffer, BUF - 1);
@@ -269,6 +279,8 @@ int main(int argc, char **argv)
                     bool DELvalid = false;
                     if (size > 0 && size < 10)
                     {
+                        char *delResponse = "DEL\n";
+                        send(new_socket, delResponse, strlen(delResponse), 0);
                         strcpy(user, buffer);
                         printf("Request from user: %s", user);
                         size = readline(new_socket, buffer, BUF - 1);

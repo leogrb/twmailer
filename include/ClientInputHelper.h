@@ -16,10 +16,15 @@ bool sendReceive(char *buffer, int *create_socket)
     int size;
     send(*create_socket, buffer, strlen(buffer), 0);
     size = recv(*create_socket, buffer, BUF - 1, 0);
+
     if (size > 0)
     {
         buffer[size] = '\0';
-        printf("%s", buffer);
+        if (strncmp(buffer, "ERR", 3) == 0 || strncmp(buffer, "OK", 2) == 0)
+        {
+            // Only print OK and ERR
+            printf("%s", buffer);
+        }
         if (strncmp(buffer, "ERR", 3) == 0)
         {
             return false;
@@ -66,14 +71,17 @@ void handleSend(char *buffer, int *create_socket)
             while (true)
             {
                 fgets(buffer, BUF, stdin);
-                if (!sendReceive(buffer, create_socket))
+                send(*create_socket, buffer, strlen(buffer), 0);
+                if (strcmp(buffer, ".\n") == 0)
                 {
                     break;
                 }
-                if (strncmp(buffer, "OK", 2) == 0)
-                {
-                    break;
-                }
+            }
+            int size = recv(*create_socket, buffer, BUF - 1, 0);
+            if (size > 0)
+            {
+                buffer[size] = '\0';
+                printf("%s", buffer);
             }
         }
     }
@@ -102,6 +110,7 @@ void handleRead(char *buffer, int *create_socket)
             {
                 break;
             }
+            printf("%s", buffer);
         }
     }
     printf("--------------\n");
@@ -112,7 +121,10 @@ void handleList(char *buffer, int *create_socket)
     printf("---- LIST ----\n");
     printf("Username: ");
     fgets(buffer, BUF, stdin);
-    sendReceive(buffer, create_socket);
+    if (sendReceive(buffer, create_socket))
+    {
+        printf("%s", buffer);
+    }
     printf("--------------\n");
 }
 

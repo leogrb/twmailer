@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <sys/time.h>
 
 #include "include/ClientInputHelper.h"
 
@@ -20,9 +19,7 @@ int main(int argc, char **argv)
     char buffer[BUF];
     struct sockaddr_in address;
     int size;
-    struct timeval timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
+
     if (argc < 3)
     {
         printf("Usage: %s serveraddress port\n", argv[0]);
@@ -56,7 +53,6 @@ int main(int argc, char **argv)
         perror("Connect error - no server available");
         return EXIT_FAILURE;
     }
-    setsockopt(create_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     do
     {
         // command communication with server

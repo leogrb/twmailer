@@ -20,7 +20,7 @@
 #include "include/ServerInputHelper.h"
 
 extern pthread_mutex_t file_lock;
-    pthread_t th1;
+
 int main(int argc, char **argv)
 {
     int create_socket, new_socket;
@@ -108,34 +108,6 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-ssize_t readline(int fd, void *vptr, size_t maxlen)
-{
-    ssize_t n, rc;
-    char c, *ptr;
-    ptr = vptr;
-    for (n = 1; n < maxlen; n++)
-    {
-    again:
-        if ((rc = read(fd, &c, 1)) == 1)
-        {
-            *ptr++ = c;
-            if (c == '\n')
-                break; // newline ist stored, like fgets()
-        }
-        else if (rc == 0)
-        {
-            if (n == 1)
-                return (0); // EOF, no data read
-            else
-                break; // EOF, some data was read
-        }
-        else
-        {
-            if (errno == EINTR)
-                goto again;
-            return (-1); // error, errno set by read()
-        };
-    };
-    *ptr = 0; // null terminate like fgets()
-    return (n);
-}//TO DO: format/comment code
+//TO DO: Delete unnecessary includes
+//TO DO: Test parallel clients
+//TO DO: format/comment code

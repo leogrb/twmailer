@@ -229,6 +229,7 @@ bool listAllMessages(char *spool, char *user, char *messages)
 
     if (dir == NULL)
     {
+	pthread_mutex_unlock(&file_lock);
         perror("Cannot open directory");
         return false;
     }

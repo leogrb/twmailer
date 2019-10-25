@@ -1,8 +1,14 @@
 /*
 header file for linked list implementation used for storing multi-line messages
 */
+
+#ifndef MESSAGE_H
+#define MESSAGE_H
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #define BUF 1024
 
 typedef struct node
@@ -11,34 +17,8 @@ typedef struct node
     struct node *next;
 } msg;
 
-void push(msg *head, char msgtext[])
-{
-    msg *current = head;
-    if (head->text[0] != '\0')
-    {
-        while (current->next != NULL)
-        {
-            current = current->next;
-        }
+void push(msg *head, char msgtext[]);
 
-        /* now we can add a new variable */
-        current->next = malloc(sizeof(msg));
-        strcpy(current->next->text, msgtext);
-        current->next->next = NULL;
-    }
-    else
-    {
-        strcpy(head->text, msgtext);
-    }
-}
+void freeList(msg *head);
 
-void freeList(msg *head)
-{
-    msg *tmp;
-    while (head != NULL)
-    {
-        tmp = head;
-        head = head->next;
-        free(tmp);
-    }
-}
+#endif

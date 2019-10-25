@@ -91,17 +91,18 @@ int main(int argc, char **argv)
             thread_params->socket_fd = &new_socket;
             thread_params->client_address = cliaddress;
 
-            if(pthread_mutex_init(&file_lock, NULL) != 0)
+            if (pthread_mutex_init(&file_lock, NULL) != 0)
             {
                 perror("Mutex initialization error\n");
             }
-            if(pthread_create(&th1, NULL, handle, (void *) thread_params) != 0)
+            if (pthread_create(&th1, NULL, handle, (void *)thread_params) != 0)
             {
                 perror("Error creating thread\n");
             }
         }
     }
-    if(pthread_mutex_destroy(&file_lock) != 0){
+    if (pthread_mutex_destroy(&file_lock) != 0)
+    {
         perror("Error destroying mutex\n");
     }
     close(create_socket);

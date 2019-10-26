@@ -53,6 +53,7 @@ int main(int argc, char **argv)
         perror("Connect error - no server available");
         return EXIT_FAILURE;
     }
+
     do
     {
         // command communication with server

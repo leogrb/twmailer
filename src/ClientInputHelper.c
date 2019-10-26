@@ -144,6 +144,10 @@ void handleDel(char *buffer, int *create_socket)
     printf("-------------\n");
 }
 
+void handleLogin(char *buffer, int *create_socket)
+{
+}
+
 void commandHandler(char *buffer, int *create_socket)
 {
     if (!sendReceive(buffer, create_socket))
@@ -165,5 +169,9 @@ void commandHandler(char *buffer, int *create_socket)
     else if (strcmp(buffer, "DEL\n") == 0)
     {
         handleDel(buffer, create_socket);
+    }
+    else if (strcmp(buffer, "LOGIN\n") == 0)
+    {
+        handleLogin(buffer, create_socket);
     }
 }

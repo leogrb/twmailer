@@ -109,6 +109,7 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-//TO DO: Delete unnecessary includes
-//TO DO: Test parallel clients
-//TO DO: format/comment code
+// TO DO: Delete unnecessary includes
+// TO DO: Test parallel clients
+// TO DO: format/comment code .. they want each line to be commented ... -_-
+// TO DO: logging for different users

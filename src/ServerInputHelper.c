@@ -596,6 +596,10 @@ void *handle(void *arg)
                             strcpy(username, buffer);
                             send(new_socket, loginResponse, strlen(loginResponse), 0);
                         }
+                        else
+                        {
+                            break;
+                        }
                     }
                     else
                     {

@@ -1,4 +1,5 @@
 #include "../include/ServerInputHelper.h"
+#include "../include/LDAPHandler.h"
 
 ssize_t readline(int fd, void *vptr, size_t maxlen)
 {
@@ -333,6 +334,7 @@ void *handle(void *arg)
     char subject[82];
     char DELnumbr[2];
     int size, valid;
+    bool isLogged = false;
     do
     {
         size = readline(new_socket, buffer, BUF - 1);
@@ -573,6 +575,45 @@ void *handle(void *arg)
                     pthread_mutex_unlock(&file_lock);
                     printf("Request successfully executed\n");
                     strcpy(buffer, "OK\n");
+                    send(new_socket, buffer, strlen(buffer), 0);
+                }
+            }
+            else if ((strncmp(buffer, "LOGIN", 5)) == 0)
+            {
+                printf("Processing LOGIN request\n");
+                char *loginResponse = "LOGIN\n";
+                bool loginValid = false;
+                char username[10];
+                char password[BUF];
+                for (int i = 0; i < 2; i++)
+                {
+                    size = readline(new_socket, buffer, BUF - 1);
+                    if (i == 0)
+                    {
+                        if (size > 0 && size < 10)
+                        {
+                            buffer[size] = '\0';
+                            strcpy(username, buffer);
+                            send(new_socket, loginResponse, strlen(loginResponse), 0);
+                        }
+                    }
+                    else
+                    {
+                        buffer[size] = '\0';
+                        strcpy(password, buffer);
+                        loginValid = userLogin(username, password);
+                    }
+                }
+                if (loginValid)
+                {
+                    printf("Request successfully executed\n");
+                    strcpy(buffer, "OK\n");
+                    send(new_socket, buffer, strlen(buffer), 0);
+                }
+                else
+                {
+                    printf("Request execution failed\n");
+                    strcpy(buffer, "ERR\n");
                     send(new_socket, buffer, strlen(buffer), 0);
                 }
             }

@@ -1,3 +1,6 @@
+#ifndef LDAP_HANDLER_H
+#define LDAP_HANDLER_H
+
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -10,4 +13,8 @@
 #define BIND_USER "uid=,ou=People,dc=technikum-wien,dc=at" /* anonymous bind with user and pw empty */
 #define BIND_PW ""
 
+#define BUF 1024
+
 bool userLogin(char *username, char *password);
+
+#endif

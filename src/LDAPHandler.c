@@ -2,6 +2,9 @@
 
 bool userLogin(char *username, char *password)
 {
+    username[strlen(username) - 1] = '\0';
+    password[strlen(password) - 1] = '\0';
+
     LDAP *ld;                /* LDAP resource handle */
     LDAPMessage *result, *e; /* LDAP result handle */
     BerElement *ber;         /* array of attributes */
@@ -16,8 +19,9 @@ bool userLogin(char *username, char *password)
     int i, rc = 0;
 
     char *userDN = NULL;
-    char *userBind = "";
-    char *filter = "";
+    char userBind[BUF];
+    char filter[BUF];
+
     sprintf(userBind, "uid=%s,ou=People,dc=technikum-wien,dc=at", username);
     sprintf(filter, "(uid=%s)", username);
 
@@ -28,22 +32,22 @@ bool userLogin(char *username, char *password)
     /* setup LDAP connection */
     if (ldap_initialize(&ld, LDAP_URI) != LDAP_SUCCESS)
     {
-        fprintf(stderr, "ldap_init failed");
+        fprintf(stderr, "[LDAP] ldap_init failed");
         return false;
     }
 
-    printf("connected to LDAP server %s\n", LDAP_URI);
+    printf("[LDAP] Connected to LDAP server %s\n", LDAP_URI);
 
     if ((rc = ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &ldapversion)) != LDAP_SUCCESS)
     {
-        fprintf(stderr, "ldap_set_option(PROTOCOL_VERSION): %s\n", ldap_err2string(rc));
+        fprintf(stderr, "[LDAP] ldap_set_option(PROTOCOL_VERSION): %s\n", ldap_err2string(rc));
         ldap_unbind_ext_s(ld, NULL, NULL);
         return false;
     }
 
     if ((rc = ldap_start_tls_s(ld, NULL, NULL)) != LDAP_SUCCESS)
     {
-        fprintf(stderr, "ldap_start_tls_s(): %s\n", ldap_err2string(rc));
+        fprintf(stderr, "[LDAP] ldap_start_tls_s(): %s\n", ldap_err2string(rc));
         ldap_unbind_ext_s(ld, NULL, NULL);
         return false;
     }
@@ -53,20 +57,20 @@ bool userLogin(char *username, char *password)
     rc = ldap_sasl_bind_s(ld, userBind, LDAP_SASL_SIMPLE, &cred, NULL, NULL, &servercredp);
     if (rc != LDAP_SUCCESS)
     {
-        fprintf(stderr, "LDAP bind error: %s\n", ldap_err2string(rc));
+        fprintf(stderr, "[LDAP] bind error: %s\n", ldap_err2string(rc));
         ldap_unbind_ext_s(ld, NULL, NULL);
         return false;
     }
     else
     {
-        printf("Bind was successful\n");
+        printf("[LDAP] Bind was successful\n");
     }
 
     rc = ldap_search_ext_s(ld, SEARCHBASE, SCOPE, filter, (char **)attribs, 0, NULL, NULL, NULL, 500, &result);
 
     if (rc != LDAP_SUCCESS)
     {
-        fprintf(stderr, "LDAP search error: %s\n", ldap_err2string(rc));
+        fprintf(stderr, "[LDAP] search error: %s\n", ldap_err2string(rc));
         ldap_unbind_ext_s(ld, NULL, NULL);
         return false;
     }
@@ -81,7 +85,7 @@ bool userLogin(char *username, char *password)
             {
                 for (i = 0; i < ldap_count_values_len(vals); i++)
                 {
-                    if (strcmp(attribute, "uid") == 0 && strcmp(vals[i]->bv_val, username))
+                    if (strcmp(attribute, "uid") == 0 && strcmp(vals[i]->bv_val, username) == 0)
                     {
                         userDN = ldap_get_dn(ld, e);
                     }
@@ -96,25 +100,23 @@ bool userLogin(char *username, char *password)
         {
             ber_free(ber, 0);
         }
-        printf("\n");
     }
     /* free memory used for result */
     ldap_msgfree(result);
-
     if (userDN != NULL)
     {
         rc = ldap_sasl_bind_s(ld, userDN, LDAP_SASL_SIMPLE, &cred, NULL, NULL, &servercredp);
         if (rc != LDAP_SUCCESS)
         {
-            fprintf(stderr, "LDAP bind error: %s\n", ldap_err2string(rc));
+            fprintf(stderr, "[LDAP] bind error: %s\n", ldap_err2string(rc));
             ldap_unbind_ext_s(ld, NULL, NULL);
             return false;
         }
-        printf("Login was successful\n");
+        printf("[LDAP] Login was successful\n");
         ldap_unbind_ext_s(ld, NULL, NULL);
         return true;
     }
-
+    fprintf(stderr, "[LDAP] An error occurred\n");
     ldap_unbind_ext_s(ld, NULL, NULL);
     return false;
 }

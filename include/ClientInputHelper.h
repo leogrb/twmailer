@@ -7,12 +7,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <termios.h>
 
 #define BUF 1024
 
 #define COMMAND_SEND_OPT 4
 #define COMMAND_READ_OPT 2
 #define COMMAND_DEL_OPT 2
+#define COMMAND_LOGIN_OPT 2
 
 bool sendReceive(char *buffer, int *create_socket);
 
@@ -24,6 +26,10 @@ void handleList(char *buffer, int *create_socket);
 
 void handleDel(char *buffer, int *create_socket);
 
+void handleLogin(char *buffer, int *create_socket);
+
 void commandHandler(char *buffer, int *create_socket);
+
+void maskpass(char *pwd);
 
 #endif

@@ -1,5 +1,31 @@
 #include "../include/ClientInputHelper.h"
 
+void maskpass(char *pwd)
+{
+    // static struct termios oldt, newt;
+    // int i = 0;
+    // int c;
+
+    // /*saving the old settings of STDIN_FILENO and copy settings for resetting*/
+    // tcgetattr(STDIN_FILENO, &oldt);
+    // newt = oldt;
+
+    // /*setting the approriate bit in the termios struct*/
+    // newt.c_lflag &= ~(ECHO);
+
+    // /*setting the new bits*/
+    // tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    // /*reading the password from the console*/
+    // while ((c = getchar()) != '\n' && c != EOF && i < BUF)
+    // {
+    //     pwd[i++] = c;
+    // }
+    // pwd[i] = '\0';
+    // /*resetting our old STDIN_FILENO*/
+    // tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
+
 bool sendReceive(char *buffer, int *create_socket)
 {
     int size;
@@ -146,6 +172,28 @@ void handleDel(char *buffer, int *create_socket)
 
 void handleLogin(char *buffer, int *create_socket)
 {
+    for (int i = 0; i < COMMAND_LOGIN_OPT; i++)
+    {
+        if (i == 0)
+        {
+            printf("Username: ");
+            fgets(buffer, BUF, stdin);
+            if (!sendReceive(buffer, create_socket))
+            {
+                break;
+            }
+        }
+        else
+        {
+            printf("Password: ");
+            // maskpass(buffer);
+            fgets(buffer, BUF, stdin);
+            if (!sendReceive(buffer, create_socket))
+            {
+                break;
+            }
+        }
+    }
 }
 
 void commandHandler(char *buffer, int *create_socket)

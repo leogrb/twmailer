@@ -322,6 +322,13 @@ bool deletemsg(char *user, int msgid, char *spool)
     return true;
 }
 
+void loginFailed(char *buffer, int *new_socket)
+{
+    printf("Request execution failed. User not logged in.\n");
+    strcpy(buffer, "ERR\n");
+    send(*new_socket, buffer, strlen(buffer), 0);
+}
+
 //thread method
 void *handle(void *arg)
 {
@@ -340,15 +347,12 @@ void *handle(void *arg)
         size = readline(new_socket, buffer, BUF - 1);
         if (size > 0)
         {
-            if (strncmp(buffer, "quit", 4) != 0)
-            {
-                send(new_socket, buffer, strlen(buffer), 0);
-            }
             buffer[size] = '\0';
             printf("Message received: %s", buffer);
-            if ((strncmp(buffer, "SEND", 4)) == 0)
+            if ((strncmp(buffer, "SEND", 4)) == 0 && isLogged)
             {
                 printf("Processing SEND request\n");
+                send(new_socket, buffer, strlen(buffer), 0);
                 char *sendResponse = "SEND\n";
                 // process message
                 for (int i = 0; i < 4; i++)
@@ -435,14 +439,14 @@ void *handle(void *arg)
                     }
                 }
             }
-            else if ((strncmp(buffer, "LIST", 4)) == 0)
+            else if ((strncmp(buffer, "LIST", 4)) == 0 && isLogged)
             {
                 printf("Processing LIST request\n");
+                send(new_socket, buffer, strlen(buffer), 0);
                 size = readline(new_socket, buffer, BUF - 1);
                 bool isValid = false;
                 if (size > 0 && size < 10)
                 {
-                    // NOTE Stefan: Not needed temp response because we have only one input
                     strcpy(user, buffer);
                     printf("Request from user: %s", user);
                     char messages[BUF];
@@ -463,9 +467,10 @@ void *handle(void *arg)
                     send(new_socket, buffer, strlen(buffer), 0);
                 }
             }
-            else if ((strncmp(buffer, "READ", 4)) == 0)
+            else if ((strncmp(buffer, "READ", 4)) == 0 && isLogged)
             {
                 printf("Processing READ request\n");
+                send(new_socket, buffer, strlen(buffer), 0);
                 size = readline(new_socket, buffer, BUF - 1);
                 bool isValid = false;
                 char output[BUF];
@@ -522,9 +527,10 @@ void *handle(void *arg)
                     send(new_socket, buffer, strlen(buffer), 0);
                 }
             }
-            else if ((strncmp(buffer, "DEL", 3)) == 0)
+            else if ((strncmp(buffer, "DEL", 3)) == 0 && isLogged)
             {
                 printf("Processing DELETE request\n");
+                send(new_socket, buffer, strlen(buffer), 0);
                 size = readline(new_socket, buffer, BUF - 1);
                 bool DELvalid = false;
                 if (size > 0 && size < 10)
@@ -578,11 +584,11 @@ void *handle(void *arg)
                     send(new_socket, buffer, strlen(buffer), 0);
                 }
             }
-            else if ((strncmp(buffer, "LOGIN", 5)) == 0)
+            else if ((strncmp(buffer, "LOGIN", 5)) == 0 && !isLogged)
             {
                 printf("Processing LOGIN request\n");
+                send(new_socket, buffer, strlen(buffer), 0);
                 char *loginResponse = "LOGIN\n";
-                bool loginValid = false;
                 char username[10];
                 char password[BUF];
                 for (int i = 0; i < 2; i++)
@@ -605,10 +611,10 @@ void *handle(void *arg)
                     {
                         buffer[size] = '\0';
                         strcpy(password, buffer);
-                        loginValid = userLogin(username, password);
+                        isLogged = userLogin(username, password);
                     }
                 }
-                if (loginValid)
+                if (isLogged)
                 {
                     printf("Request successfully executed\n");
                     strcpy(buffer, "OK\n");
@@ -618,6 +624,22 @@ void *handle(void *arg)
                 {
                     printf("Request execution failed\n");
                     strcpy(buffer, "ERR\n");
+                    send(new_socket, buffer, strlen(buffer), 0);
+                }
+            }
+            else
+            {
+                if (strncmp(buffer, "SEND", 4) == 0 ||
+                    strncmp(buffer, "LIST", 4) == 0 ||
+                    strncmp(buffer, "READ", 4) == 0 ||
+                    strncmp(buffer, "DEL", 3) == 0 ||
+                    (strncmp(buffer, "LOGIN", 5) == 0 && isLogged))
+                {
+                    loginFailed(buffer, &new_socket);
+                }
+                else if (strncmp(buffer, "quit", 4) != 0)
+                {
+                    // handling all other received messages
                     send(new_socket, buffer, strlen(buffer), 0);
                 }
             }

@@ -4,28 +4,25 @@ void maskpass(char *pwd)
 {
     static struct termios oldt, newt;
 
-    /*saving the old settings of STDIN_FILENO and copy settings for resetting*/
+    // saving the old settings of STDIN_FILENO and copy settings for resetting
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
 
-    /*setting the approriate bit in the termios struct*/
+    // setting the approriate bit in the termios struct
     newt.c_lflag &= ~(ECHO);
 
-    /*setting the new bits*/
+    // setting the new bits
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     fgets(pwd, BUF, stdin);
 
-    /*resetting our old STDIN_FILENO*/
+    // resetting our old STDIN_FILENO
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
-bool sendReceive(char *buffer, int *create_socket)
+bool checkFailReceive(char *buffer, int *create_socket)
 {
-    int size;
-    send(*create_socket, buffer, strlen(buffer), 0);
-    size = recv(*create_socket, buffer, BUF - 1, 0);
-
+    int size = recv(*create_socket, buffer, BUF - 1, 0);
     if (size > 0)
     {
         buffer[size] = '\0';
@@ -36,8 +33,18 @@ bool sendReceive(char *buffer, int *create_socket)
         }
         if (strncmp(buffer, "ERR", 3) == 0)
         {
-            return false;
+            return true;
         }
+    }
+    return false;
+}
+
+bool sendReceive(char *buffer, int *create_socket)
+{
+    send(*create_socket, buffer, strlen(buffer), 0);
+    if (checkFailReceive(buffer, create_socket))
+    {
+        return false;
     }
     return true;
 }

@@ -143,7 +143,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
         perror("Error opening file!\n");
         return false;
     }
-    fprintf(f, "%s%s-\n", user, subject);
+    fprintf(f, "%s\n%s-\n", user, subject);
     msg *a = head;
     while (a != NULL)
     {
@@ -207,7 +207,7 @@ bool listAllMessages(char *spool, char *user, char *messages)
     strcat(path, "/");
     strcat(path, user);
     // get rid of new line char at the end of the string
-    path[strlen(path) - 1] = '\0';
+    // path[strlen(path) - 1] = '\0';
     dir = opendir(path);
 
     if (dir == NULL)
@@ -263,7 +263,7 @@ bool readMessage(char *user, int msgNumber, char *spool, char *output)
     char messagePath[BUF];
     char messageName[BUF];
 
-    user[strlen(user) - 1] = '\0';
+    // user[strlen(user) - 1] = '\0';
     strcpy(messagePath, spool);
     strcat(messagePath, "/");
     strcat(messagePath, user);
@@ -291,7 +291,7 @@ bool deletemsg(char *user, int msgid, char *spool)
     pthread_mutex_lock(&file_lock);
     char temp[BUF];
     char buf2[BUF];
-    user[strlen(user) - 1] = '\0'; //get rid of '\n'
+    // user[strlen(user) - 1] = '\0'; //get rid of '\n'
     //build folder for user
     strcpy(temp, spool);
     strcat(temp, "/");
@@ -355,29 +355,19 @@ void *handle(void *arg)
                 send(new_socket, buffer, strlen(buffer), 0);
                 char *sendResponse = "SEND\n";
                 // process message
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     valid = -1;
                     size = readline(new_socket, buffer, BUF - 1);
-                    if (size > 0 && size < 10 && i < 2)
+                    if (size > 0 && size < 10 && i == 0)
                     {
                         buffer[size] = '\0';
-                        if (i == 0)
-                        {
-                            strcpy(user, buffer);
-                            printf("Request from user: %s", user);
-                            valid = 1;
-                            send(new_socket, sendResponse, strlen(sendResponse), 0);
-                        }
-                        else if (i == 1)
-                        {
-                            strcpy(receiver, buffer);
-                            printf("Send to receiver: %s", receiver);
-                            valid = 1;
-                            send(new_socket, sendResponse, strlen(sendResponse), 0);
-                        }
+                        strcpy(receiver, buffer);
+                        printf("Send to receiver: %s", receiver);
+                        valid = 1;
+                        send(new_socket, sendResponse, strlen(sendResponse), 0);
                     }
-                    else if (size > 0 && size < 82 && i == 2)
+                    else if (size > 0 && size < 82 && i == 1)
                     {
                         buffer[size] = '\0';
                         strcpy(subject, buffer);
@@ -385,7 +375,7 @@ void *handle(void *arg)
                         valid = 1;
                         send(new_socket, sendResponse, strlen(sendResponse), 0);
                     }
-                    else if (size > 0 && i == 3)
+                    else if (size > 0 && i == 2)
                     {
                         //linked list for saving msg text
                         buffer[size] = '\0';
@@ -443,22 +433,18 @@ void *handle(void *arg)
             {
                 printf("Processing LIST request\n");
                 send(new_socket, buffer, strlen(buffer), 0);
+                // do nothing with readline
                 size = readline(new_socket, buffer, BUF - 1);
                 bool isValid = false;
-                if (size > 0 && size < 10)
+                char messages[BUF];
+                if (listAllMessages(spool, user, messages))
                 {
-                    strcpy(user, buffer);
-                    printf("Request from user: %s", user);
-                    char messages[BUF];
-                    if (listAllMessages(spool, user, messages))
-                    {
-                        pthread_mutex_unlock(&file_lock);
-                        printf("Request successfully executed\n");
-                        strcpy(buffer, messages);
-                        strcat(buffer, "OK\n");
-                        send(new_socket, buffer, strlen(buffer), 0);
-                        isValid = true;
-                    }
+                    pthread_mutex_unlock(&file_lock);
+                    printf("Request successfully executed\n");
+                    strcpy(buffer, messages);
+                    strcat(buffer, "OK\n");
+                    send(new_socket, buffer, strlen(buffer), 0);
+                    isValid = true;
                 }
                 if (!isValid)
                 {
@@ -474,42 +460,34 @@ void *handle(void *arg)
                 size = readline(new_socket, buffer, BUF - 1);
                 bool isValid = false;
                 char output[BUF];
-                if (size > 0 && size < 10)
+                if (size > 0)
                 {
-                    char *readResponse = "READ\n";
-                    send(new_socket, readResponse, strlen(readResponse), 0);
-                    strcpy(user, buffer);
-                    printf("Request from user: %s", user);
-                    size = readline(new_socket, buffer, BUF - 1);
-                    if (size > 0)
+                    int n = 0;
+                    int msgNumber;
+                    while (n < size && isdigit(buffer[n]))
                     {
-                        int n = 0;
-                        int msgNumber;
-                        while (n < size && isdigit(buffer[n]))
+                        n++;
+                    }
+                    if (n == 0)
+                    {
+                        isValid = false;
+                    }
+                    if (n == 1)
+                    {
+                        char readNumber[2];
+                        readNumber[0] = buffer[0];
+                        readNumber[1] = '\n';
+                        msgNumber = (int)strtol(readNumber, NULL, 10);
+                        if (msgNumber != 0)
                         {
-                            n++;
-                        }
-                        if (n == 0)
-                        {
-                            isValid = false;
-                        }
-                        if (n == 1)
-                        {
-                            char readNumber[2];
-                            readNumber[0] = buffer[0];
-                            readNumber[1] = '\n';
-                            msgNumber = (int)strtol(readNumber, NULL, 10);
-                            if (msgNumber != 0)
-                            {
-                                isValid = readMessage(user, msgNumber, spool, output);
-                            }
-                        }
-                        else if (n > 1 && buffer[n] == '\n')
-                        {
-                            buffer[n] = '\0';
-                            msgNumber = (int)strtol(buffer, NULL, 10);
                             isValid = readMessage(user, msgNumber, spool, output);
                         }
+                    }
+                    else if (n > 1 && buffer[n] == '\n')
+                    {
+                        buffer[n] = '\0';
+                        msgNumber = (int)strtol(buffer, NULL, 10);
+                        isValid = readMessage(user, msgNumber, spool, output);
                     }
                 }
                 if (!isValid)
@@ -533,41 +511,33 @@ void *handle(void *arg)
                 send(new_socket, buffer, strlen(buffer), 0);
                 size = readline(new_socket, buffer, BUF - 1);
                 bool DELvalid = false;
-                if (size > 0 && size < 10)
+                if (size > 0)
                 {
-                    char *delResponse = "DEL\n";
-                    send(new_socket, delResponse, strlen(delResponse), 0);
-                    strcpy(user, buffer);
-                    printf("Request from user: %s", user);
-                    size = readline(new_socket, buffer, BUF - 1);
-                    if (size > 0)
+                    int n = 0;
+                    int msgnr;
+                    while (n < size && isdigit(buffer[n]))
                     {
-                        int n = 0;
-                        int msgnr;
-                        while (n < size && isdigit(buffer[n]))
+                        n++;
+                    }
+                    if (n == 0)
+                    {
+                        DELvalid = false;
+                    }
+                    if (n == 1)
+                    {
+                        DELnumbr[0] = buffer[0];
+                        DELnumbr[1] = '\0';
+                        msgnr = (int)strtol(DELnumbr, NULL, 10);
+                        if (msgnr != 0)
                         {
-                            n++;
-                        }
-                        if (n == 0)
-                        {
-                            DELvalid = false;
-                        }
-                        if (n == 1)
-                        {
-                            DELnumbr[0] = buffer[0];
-                            DELnumbr[1] = '\0';
-                            msgnr = (int)strtol(DELnumbr, NULL, 10);
-                            if (msgnr != 0)
-                            {
-                                DELvalid = deletemsg(user, msgnr, spool);
-                            }
-                        }
-                        else if (n > 1 && buffer[n] == '\n')
-                        {
-                            buffer[n] = '\0';
-                            msgnr = (int)strtol(buffer, NULL, 10);
                             DELvalid = deletemsg(user, msgnr, spool);
                         }
+                    }
+                    else if (n > 1 && buffer[n] == '\n')
+                    {
+                        buffer[n] = '\0';
+                        msgnr = (int)strtol(buffer, NULL, 10);
+                        DELvalid = deletemsg(user, msgnr, spool);
                     }
                 }
                 if (!DELvalid)
@@ -589,7 +559,6 @@ void *handle(void *arg)
                 printf("Processing LOGIN request\n");
                 send(new_socket, buffer, strlen(buffer), 0);
                 char *loginResponse = "LOGIN\n";
-                char username[10];
                 char password[BUF];
                 for (int i = 0; i < 2; i++)
                 {
@@ -599,7 +568,7 @@ void *handle(void *arg)
                         if (size > 0 && size < 10)
                         {
                             buffer[size] = '\0';
-                            strcpy(username, buffer);
+                            strcpy(user, buffer);
                             send(new_socket, loginResponse, strlen(loginResponse), 0);
                         }
                         else
@@ -611,7 +580,7 @@ void *handle(void *arg)
                     {
                         buffer[size] = '\0';
                         strcpy(password, buffer);
-                        isLogged = userLogin(username, password);
+                        isLogged = userLogin(user, password);
                     }
                 }
                 if (isLogged)

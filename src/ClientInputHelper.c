@@ -26,7 +26,7 @@ bool checkFailReceive(char *buffer, int *create_socket)
     if (size > 0)
     {
         buffer[size] = '\0';
-        if (strncmp(buffer, "ERR", 3) == 0 || strncmp(buffer, "OK", 2) == 0)
+        if (strncmp(buffer, "ERR", 3) == 0)
         {
             // Only print OK and ERR
             printf("%s", buffer);
@@ -56,15 +56,6 @@ void handleSend(char *buffer, int *create_socket)
     {
         if (i == 0)
         {
-            printf("Sender: ");
-            fgets(buffer, BUF, stdin);
-            if (!sendReceive(buffer, create_socket))
-            {
-                break;
-            }
-        }
-        else if (i == 1)
-        {
             printf("Receiver: ");
             fgets(buffer, BUF, stdin);
             if (!sendReceive(buffer, create_socket))
@@ -72,7 +63,7 @@ void handleSend(char *buffer, int *create_socket)
                 break;
             }
         }
-        else if (i == 2)
+        else if (i == 1)
         {
             printf("Subject: ");
             fgets(buffer, BUF, stdin);
@@ -107,27 +98,11 @@ void handleSend(char *buffer, int *create_socket)
 void handleRead(char *buffer, int *create_socket)
 {
     printf("---- READ ----\n");
-    for (int i = 0; i < COMMAND_READ_OPT; i++)
+    printf("Message ID: ");
+    fgets(buffer, BUF, stdin);
+    if (sendReceive(buffer, create_socket))
     {
-        if (i == 0)
-        {
-            printf("Username: ");
-            fgets(buffer, BUF, stdin);
-            if (!sendReceive(buffer, create_socket))
-            {
-                break;
-            }
-        }
-        else
-        {
-            printf("Message ID: ");
-            fgets(buffer, BUF, stdin);
-            if (!sendReceive(buffer, create_socket))
-            {
-                break;
-            }
-            printf("%s", buffer);
-        }
+        printf("%s", buffer);
     }
     printf("--------------\n");
 }
@@ -135,8 +110,6 @@ void handleRead(char *buffer, int *create_socket)
 void handleList(char *buffer, int *create_socket)
 {
     printf("---- LIST ----\n");
-    printf("Username: ");
-    fgets(buffer, BUF, stdin);
     if (sendReceive(buffer, create_socket))
     {
         printf("%s", buffer);
@@ -147,26 +120,11 @@ void handleList(char *buffer, int *create_socket)
 void handleDel(char *buffer, int *create_socket)
 {
     printf("---- DEL ----\n");
-    for (int i = 0; i < COMMAND_DEL_OPT; i++)
+    printf("Message ID: ");
+    fgets(buffer, BUF, stdin);
+    if (sendReceive(buffer, create_socket))
     {
-        if (i == 0)
-        {
-            printf("Username: ");
-            fgets(buffer, BUF, stdin);
-            if (!sendReceive(buffer, create_socket))
-            {
-                break;
-            }
-        }
-        else
-        {
-            printf("Message ID: ");
-            fgets(buffer, BUF, stdin);
-            if (!sendReceive(buffer, create_socket))
-            {
-                break;
-            }
-        }
+        printf("%s", buffer);
     }
     printf("-------------\n");
 }
@@ -193,6 +151,7 @@ void handleLogin(char *buffer, int *create_socket)
             {
                 break;
             }
+            printf("%s", buffer);
         }
     }
 }

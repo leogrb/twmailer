@@ -11,9 +11,7 @@
 
 #define BUF 1024
 
-#define COMMAND_SEND_OPT 4
-#define COMMAND_READ_OPT 2
-#define COMMAND_DEL_OPT 2
+#define COMMAND_SEND_OPT 3
 #define COMMAND_LOGIN_OPT 2
 
 bool sendReceive(char *buffer, int *create_socket);

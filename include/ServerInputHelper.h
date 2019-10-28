@@ -14,11 +14,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <pthread.h>
 #include <errno.h>
+#include <time.h>
 
 #include "message.h"
 #include "thread.h"
+#include "vector.h"
+#include "ip.h"
 
 #define BUF 1024
 
@@ -42,5 +46,7 @@ bool deletemsg(char *user, int msgid, char *spool);
 
 //thread method
 void *handle(void *arg);
+
+bool isAddressBlocked(vector *v, ip_t *ip);
 
 #endif

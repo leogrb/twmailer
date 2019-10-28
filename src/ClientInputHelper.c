@@ -151,7 +151,10 @@ void handleLogin(char *buffer, int *create_socket)
             {
                 break;
             }
-            printf("%s", buffer);
+            if (strncmp(buffer, "quit", 4) != 0)
+            {
+                printf("%s", buffer);
+            }
         }
     }
 }

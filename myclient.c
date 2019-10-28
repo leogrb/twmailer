@@ -45,6 +45,12 @@ int main(int argc, char **argv)
         if (size > 0)
         {
             buffer[size] = '\0';
+            if (strncmp(buffer, "quit", 4) == 0)
+            {
+                close(create_socket);
+                printf("Connection closed. Your IP Address has been blocked.\n");
+                return EXIT_SUCCESS;
+            }
             printf("%s", buffer);
         }
     }

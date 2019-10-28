@@ -23,6 +23,10 @@ extern pthread_mutex_t file_lock;
 
 int main(int argc, char **argv)
 {
+    vector v;
+    // init vector
+    vector_init(&v);
+
     int create_socket, new_socket;
     socklen_t addrlen;
     char buffer[BUF];
@@ -32,6 +36,7 @@ int main(int argc, char **argv)
     if (argc < 3)
     {
         printf("Usage: %s port spooldirectory\n", argv[0]);
+        vector_free(&v);
         return EXIT_FAILURE;
     }
     int port = atoi(argv[1]);
@@ -41,6 +46,7 @@ int main(int argc, char **argv)
     {
         perror("Error creating socket\n");
         free(spool);
+        vector_free(&v);
         return EXIT_FAILURE;
     }
     memset(&address, 0, sizeof(address));
@@ -52,12 +58,14 @@ int main(int argc, char **argv)
     {
         perror("bind error");
         free(spool);
+        vector_free(&v);
         return EXIT_FAILURE;
     }
     if (listen(create_socket, 5) == -1)
     {
         perror("Listen to socket failed\n");
         free(spool);
+        vector_free(&v);
         return EXIT_FAILURE;
     }
 
@@ -80,16 +88,29 @@ int main(int argc, char **argv)
     {
         printf("Waiting for connections...\n");
         new_socket = accept(create_socket, (struct sockaddr *)&cliaddress, &addrlen);
-
         // handle new client
         if (new_socket > 0)
         {
+            // create ip address structure
+            ip_t ipAddress;
+            ipAddress.ip_address = inet_ntoa(cliaddress.sin_addr);
+            ipAddress.saved_time = time(NULL);
+            // check is address already blocked
+            if (isAddressBlocked(&v, &ipAddress))
+            {
+                // send to client command to close connections and print message
+                printf("Connection not possible. IP Address has been blocked.\n");
+                strcpy(buffer, "quit\n");
+                send(new_socket, buffer, strlen(buffer), 0);
+                continue;
+            }
             printf("Client connected from %s:%d...\n", inet_ntoa(cliaddress.sin_addr), ntohs(cliaddress.sin_port));
             strcpy(buffer, "Welcome to twmailer, Please enter your command\n");
             send(new_socket, buffer, strlen(buffer), 0);
             thread_params->spoolpath = spool;
             thread_params->socket_fd = &new_socket;
             thread_params->client_address = cliaddress;
+            thread_params->vec = &v;
 
             if (pthread_mutex_init(&file_lock, NULL) != 0)
             {
@@ -105,6 +126,7 @@ int main(int argc, char **argv)
     {
         perror("Error destroying mutex\n");
     }
+    vector_free(&v);
     close(create_socket);
     return EXIT_SUCCESS;
 }

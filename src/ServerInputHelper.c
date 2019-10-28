@@ -335,12 +335,15 @@ void *handle(void *arg)
     int new_socket = *(((thread_struct *)arg)->socket_fd);
     struct sockaddr_in client_address = ((thread_struct *)arg)->client_address;
     char *spool = ((thread_struct *)arg)->spoolpath;
+    vector *v = ((thread_struct *)arg)->vec;
+
     char buffer[BUF];
     char user[10];
     char receiver[10];
     char subject[82];
     char DELnumbr[2];
     int size, valid;
+    int numberOfLoginTries = 0;
     bool isLogged = false;
     do
     {
@@ -591,6 +594,20 @@ void *handle(void *arg)
                 }
                 else
                 {
+                    numberOfLoginTries++;
+                    if (numberOfLoginTries >= 3)
+                    {
+                        strcpy(buffer, "quit\n");
+                        send(new_socket, buffer, strlen(buffer), 0);
+                        printf("Request execution failed\n");
+                        printf("Client closed remote socket - IP Address has been blocked for 30 minutes\n");
+                        ip_t ipAddress;
+                        ipAddress.ip_address = inet_ntoa(client_address.sin_addr);
+                        ipAddress.saved_time = time(NULL);
+                        vector_add(v, &ipAddress);
+                        close(new_socket);
+                        pthread_exit(NULL);
+                    }
                     printf("Request execution failed\n");
                     strcpy(buffer, "ERR\n");
                     send(new_socket, buffer, strlen(buffer), 0);
@@ -625,4 +642,27 @@ void *handle(void *arg)
     } while (strncmp(buffer, "quit", 4) != 0);
     close(new_socket);
     pthread_exit(NULL);
+}
+
+bool isAddressBlocked(vector *v, ip_t *ip)
+{
+    printf("Count: %d\n", vector_count(v));
+    // first get index of address from vector
+    int index = vector_get_index(v, ip->ip_address);
+    printf("Index: %d\n", index);
+    if (index < 0)
+    {
+        return false;
+    }
+    ip_t *saved_ip = vector_get(v, index);
+    time_t cur_time = time(NULL);
+    time_t saved_time = saved_ip->saved_time;
+    printf("Diff: %ld\n", cur_time - saved_time);
+    if (cur_time - saved_time < MIN_30)
+    {
+        return true;
+    }
+    // if 30 min expired already, remove address from vector
+    vector_delete(v, index);
+    return false;
 }

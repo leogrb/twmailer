@@ -27,6 +27,7 @@
 #define BUF 1024
 
 pthread_mutex_t file_lock;
+pthread_mutex_t ip_lock;
 
 ssize_t readline(int fd, void *vptr, size_t maxlen);
 

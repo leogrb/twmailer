@@ -49,7 +49,7 @@ void *vector_get(vector *v, int index)
 {
     if (index >= v->count)
     {
-        return;
+        return NULL;
     }
 
     return v->data[index];

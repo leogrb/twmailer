@@ -47,6 +47,7 @@ int main(int argc, char **argv)
             buffer[size] = '\0';
             if (strncmp(buffer, "quit", 4) == 0)
             {
+                // check if connection possible. If server sends 'quit', connection will be automatically closed
                 close(create_socket);
                 printf("Connection closed. Your IP Address has been blocked.\n");
                 return EXIT_SUCCESS;

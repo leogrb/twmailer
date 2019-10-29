@@ -597,6 +597,7 @@ void *handle(void *arg)
                     numberOfLoginTries++;
                     if (numberOfLoginTries >= 3)
                     {
+                        // case when user login was 3rd time wrong -> add address to blocklist with the current time
                         pthread_mutex_lock(&ip_lock);
                         strcpy(buffer, "quit\n");
                         send(new_socket, buffer, strlen(buffer), 0);
@@ -649,10 +650,10 @@ void *handle(void *arg)
 bool isAddressBlocked(vector *v, ip_t *ip)
 {
     pthread_mutex_lock(&ip_lock);
-    printf("Count: %d\n", vector_count(v));
+    printf("[DEBUG] Number of blocked IPs: %d\n", vector_count(v));
     // first get index of address from vector
     int index = vector_get_index(v, ip->ip_address);
-    printf("Index: %d\n", index);
+    printf("[DEBUG] Index in vector: %d\n", index);
     if (index < 0)
     {
         pthread_mutex_unlock(&ip_lock);
@@ -661,7 +662,7 @@ bool isAddressBlocked(vector *v, ip_t *ip)
     ip_t *saved_ip = vector_get(v, index);
     time_t cur_time = time(NULL);
     time_t saved_time = saved_ip->saved_time;
-    printf("Diff: %ld\n", cur_time - saved_time);
+    // printf("[DEBUG] Timeout: %ld\n", MIN_30 - (cur_time - saved_time));
     if (cur_time - saved_time < MIN_30)
     {
         pthread_mutex_unlock(&ip_lock);

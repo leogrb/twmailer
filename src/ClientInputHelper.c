@@ -1,16 +1,16 @@
 #include "../include/ClientInputHelper.h"
 
+/**
+ * Function used to mask password input
+ */
 void maskpass(char *pwd)
 {
     static struct termios oldt, newt;
-
     // saving the old settings of STDIN_FILENO and copy settings for resetting
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-
     // setting the approriate bit in the termios struct
     newt.c_lflag &= ~(ECHO);
-
     // setting the new bits
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
@@ -41,7 +41,9 @@ bool checkFailReceive(char *buffer, int *create_socket)
 
 bool sendReceive(char *buffer, int *create_socket)
 {
+    // send request to server
     send(*create_socket, buffer, strlen(buffer), 0);
+    // check for server response success or failure
     if (checkFailReceive(buffer, create_socket))
     {
         return false;
@@ -161,6 +163,7 @@ void handleLogin(char *buffer, int *create_socket)
 
 void commandHandler(char *buffer, int *create_socket)
 {
+    // before handling commands, check for incoming responses from server
     if (!sendReceive(buffer, create_socket))
     {
         return;

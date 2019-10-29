@@ -4,6 +4,10 @@
 
 #include "../include/vector.h"
 
+/*
+C implementation of vector structure used for blocked ip-addresses list
+*/
+
 void vector_init(vector *v)
 {
     v->data = NULL;

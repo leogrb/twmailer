@@ -20,6 +20,7 @@
 #include "include/ServerInputHelper.h"
 
 extern pthread_mutex_t file_lock;
+extern pthread_mutex_t ip_lock;
 
 int main(int argc, char **argv)
 {
@@ -114,7 +115,11 @@ int main(int argc, char **argv)
 
             if (pthread_mutex_init(&file_lock, NULL) != 0)
             {
-                perror("Mutex initialization error\n");
+                perror("File Lock Mutex initialization error\n");
+            }
+            if (pthread_mutex_init(&ip_lock, NULL) != 0)
+            {
+                perror("IP Lock Mutex initialization error\n");
             }
             if (pthread_create(&th1, NULL, handle, (void *)thread_params) != 0)
             {
@@ -124,7 +129,11 @@ int main(int argc, char **argv)
     }
     if (pthread_mutex_destroy(&file_lock) != 0)
     {
-        perror("Error destroying mutex\n");
+        perror("Error destroying file lock mutex\n");
+    }
+    if (pthread_mutex_destroy(&ip_lock) != 0)
+    {
+        perror("Error destroying ip lock mutex\n");
     }
     vector_free(&v);
     close(create_socket);

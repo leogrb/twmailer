@@ -597,6 +597,7 @@ void *handle(void *arg)
                     numberOfLoginTries++;
                     if (numberOfLoginTries >= 3)
                     {
+                        pthread_mutex_lock(&ip_lock);
                         strcpy(buffer, "quit\n");
                         send(new_socket, buffer, strlen(buffer), 0);
                         printf("Request execution failed\n");
@@ -605,6 +606,7 @@ void *handle(void *arg)
                         ipAddress.ip_address = inet_ntoa(client_address.sin_addr);
                         ipAddress.saved_time = time(NULL);
                         vector_add(v, &ipAddress);
+                        pthread_mutex_unlock(&ip_lock);
                         close(new_socket);
                         pthread_exit(NULL);
                     }
@@ -646,12 +648,14 @@ void *handle(void *arg)
 
 bool isAddressBlocked(vector *v, ip_t *ip)
 {
+    pthread_mutex_lock(&ip_lock);
     printf("Count: %d\n", vector_count(v));
     // first get index of address from vector
     int index = vector_get_index(v, ip->ip_address);
     printf("Index: %d\n", index);
     if (index < 0)
     {
+        pthread_mutex_unlock(&ip_lock);
         return false;
     }
     ip_t *saved_ip = vector_get(v, index);
@@ -660,9 +664,11 @@ bool isAddressBlocked(vector *v, ip_t *ip)
     printf("Diff: %ld\n", cur_time - saved_time);
     if (cur_time - saved_time < MIN_30)
     {
+        pthread_mutex_unlock(&ip_lock);
         return true;
     }
     // if 30 min expired already, remove address from vector
     vector_delete(v, index);
+    pthread_mutex_unlock(&ip_lock);
     return false;
 }

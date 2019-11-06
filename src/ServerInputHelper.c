@@ -33,6 +33,7 @@ ssize_t readline(int fd, void *vptr, size_t maxlen)
     return (n);
 }
 
+// function for creating/returning messageid
 int counter(char *userdir)
 {
     int i;
@@ -105,19 +106,7 @@ bool createmsg(char *user, char *receiver, char *subject, msg *head, char *spool
     {
         //printf("some other error");
     }
-    /*time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
-    char s[64];
-    assert(strftime(s, sizeof(s), "%c", tm));
-    for(int i = 0; i < strlen(s); i++){
-        if(s[i]==' '){
-            s[i]='_';
-        }
-    }
-    strcat(temp, "/");
-    strcat(temp, s);
-    strcat(temp, ".txt");
-    */
+
     //create file
     int j = counter(temp);
     if (j == -1)
@@ -332,6 +321,7 @@ void loginFailed(char *buffer, int *new_socket)
 //thread method
 void *handle(void *arg)
 {
+    // get thread params
     int new_socket = *(((thread_struct *)arg)->socket_fd);
     struct sockaddr_in client_address = ((thread_struct *)arg)->client_address;
     char *spool = ((thread_struct *)arg)->spoolpath;

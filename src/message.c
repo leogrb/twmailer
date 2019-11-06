@@ -1,8 +1,10 @@
 #include "../include/message.h"
 
+// linked list for storing message body
 void push(msg *head, char msgtext[])
 {
     msg *current = head;
+    //check if head is empty
     if (head->text[0] != '\0')
     {
         while (current->next != NULL)

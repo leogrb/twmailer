@@ -53,6 +53,7 @@ int main(int argc, char **argv)
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
+    // convert to network byte order
     address.sin_port = htons(port);
 
     if (bind(create_socket, (struct sockaddr *)&address, sizeof(address)) != 0)
@@ -108,11 +109,13 @@ int main(int argc, char **argv)
             printf("Client connected from %s:%d...\n", inet_ntoa(cliaddress.sin_addr), ntohs(cliaddress.sin_port));
             strcpy(buffer, "Welcome to twmailer, Please enter your command\n");
             send(new_socket, buffer, strlen(buffer), 0);
+            // set thread parameters
             thread_params->spoolpath = spool;
             thread_params->socket_fd = &new_socket;
             thread_params->client_address = cliaddress;
             thread_params->vec = &v;
 
+            // initialize mutexes
             if (pthread_mutex_init(&file_lock, NULL) != 0)
             {
                 perror("File Lock Mutex initialization error\n");
@@ -121,6 +124,8 @@ int main(int argc, char **argv)
             {
                 perror("IP Lock Mutex initialization error\n");
             }
+
+            // create new thread for client
             if (pthread_create(&th1, NULL, handle, (void *)thread_params) != 0)
             {
                 perror("Error creating thread\n");
@@ -136,6 +141,7 @@ int main(int argc, char **argv)
         perror("Error destroying ip lock mutex\n");
     }
     vector_free(&v);
+    free(spool);
     close(create_socket);
     return EXIT_SUCCESS;
 }
